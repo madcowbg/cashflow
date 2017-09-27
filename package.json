@@ -1,0 +1,33 @@
+{
+  "name": "cashflow",
+  "version": "0.0.1",
+  "description": "Analysis of portfolios based on cashflows and Gordon formula",
+  "scripts": {
+    "build": "tsc",
+    "watch": "tsc -w",
+    "lint": "eslint -c .eslintrc --ext .ts ./src",
+    "start": "npm run build && electron ./dist/main.js"
+  },
+  "repository": "TODO",
+  "keywords": [
+    "cashflow",
+    "portfolio",
+    "investments",
+    "Gordon"
+  ],
+  "author": "Bono Nonchev",
+  "license": "CC BY-NC-SA 4.0",
+  "devDependencies": {
+    "@typescript-eslint/eslint-plugin": "^3.4.0",
+    "@typescript-eslint/parser": "^3.4.0",
+    "eslint": "^7.3.1",
+    "electron": "^9.4.0",
+    "typescript": "^3.9.5"
+  },
+  "dependencies": {
+    "@amcharts/amcharts4": "^4.10.18",
+    "@types/chart.js": "^2.9.32",
+    "d3": "^6.7.0",
+    "electron-chartjs": "^1.0.0"
+  }
+}
