@@ -14,15 +14,20 @@
     />
   </head>
   <body>
+    <div class="container">
+      <ul id="titles"></ul>
+      <div id="content" contenteditable="true">
+        <p>Select a title <br />  &#x2190</p>
+      </div>
+    </div>
+
+    <canvas id="myChart" width="400" height="400"></canvas>
+    <div id="mytext"></div>
 
     <h1>Hello World!</h1>
     We are using Node.js <span id="node-version"></span>, Chromium
     <span id="chrome-version"></span>, and Electron
     <span id="electron-version"></span>.
-
-    <div id="mytext"></div>
-
-    <canvas id="myChart" width="400" height="400"></canvas>
 
     <!-- You can also require other files to run in this process -->
     <script src="./dist/renderer.js"></script>
