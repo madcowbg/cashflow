@@ -16,7 +16,7 @@
     "Gordon"
   ],
   "author": "Bono Nonchev",
-  "license": "CC BY-NC-SA 4.0",
+  "license": "CC-BY-NC-SA-4.0",
   "devDependencies": {
     "@typescript-eslint/eslint-plugin": "^3.4.0",
     "@typescript-eslint/parser": "^3.4.0",
