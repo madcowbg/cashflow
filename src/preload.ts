@@ -1,30 +1,32 @@
 // All of the Node.js APIs are available in the preload process.
 // It has the same sandbox as a Chrome extension.
 
-import * as _ from "lodash"
 import {Chart, ChartData, ChartDataSets} from "chart.js"
+import {calcRandom, RandomSeriesData} from "./calc/randomdata";
 
-import * as d3 from "d3-random"
+import * as fs from 'fs';
+import {app} from "electron";
 
-interface RandomSeriesData {
-    returnsData: number[],
-    pricesData: number[],
-    days: string[]
+interface AppSettings {
+    mean: number
+    std: number
 }
 
-function calcRandom(mean: number, std: number): RandomSeriesData {
-    const normalRNG = d3.randomNormal.source(d3.randomLcg(1251241))(mean, std);
+const settingsFilename = "settings.json";
+let appSettings: AppSettings;
+try {
+    const fileData = fs.readFileSync(settingsFilename, {encoding: "UTF8"});
+    appSettings = JSON.parse(fileData);
+} catch {
+    appSettings = {} as AppSettings;
+}
 
-    const returnsData = _.map(_.range(0, 100), normalRNG);
 
-    const pricesData = [100];
-    for (let i = 0; i < returnsData.length; i++) {
-        pricesData.push(pricesData[pricesData.length - 1] * (1 + returnsData[i]));
-    }
+appSettings.mean = appSettings.mean || 0.0;
+appSettings.std = appSettings.std || 0.2;
 
-    const days = _.map(_.range(0, 100), (v) => "day " + (v + 1));
-
-    return {returnsData, pricesData, days}
+function saveSettings(): void {
+    fs.writeFileSync(settingsFilename, JSON.stringify(appSettings), {encoding: "UTF8"});
 }
 
 function toChartData(data: RandomSeriesData): ChartData {
@@ -61,15 +63,17 @@ function updateChart(chart: Chart, inputMean: HTMLInputElement, inputStd: HTMLIn
     const dataset: ChartDataSets = chart.data.datasets[0];
 
     return () => {
-        const percentMean = parseFloat(inputMean.value) / 100;
-        const percentStd = parseFloat(inputStd.value) / 100;
+        appSettings.mean = parseFloat(inputMean.value) / 100;
+        appSettings.std = parseFloat(inputStd.value) / 100;
 
-        console.log(`setting mean to ${percentMean}% and stdev to ${percentStd}%`);
+        console.log(`setting mean to ${appSettings.mean}% and stdev to ${appSettings.std}%`);
 
-        const randomData = calcRandom(percentMean, percentStd);
+        const randomData = calcRandom(appSettings.mean, appSettings.std);
 
         dataset.data = randomData.pricesData;
         chart.update();
+
+        saveSettings();
     }
 }
 
@@ -99,6 +103,9 @@ window.addEventListener("DOMContentLoaded", () => {
     const inputMean = document.getElementById("parameter-mean") as HTMLInputElement;
     const inputStd = document.getElementById("parameter-std") as HTMLInputElement;
     const chartCanvas = document.getElementById('myChart') as HTMLCanvasElement;
+
+    inputMean.value = (appSettings.mean * 100).toString();
+    inputStd.value = (appSettings.std * 100).toString();
 
     initLinkedChart(chartCanvas, inputMean, inputStd);
 });
