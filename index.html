@@ -2,7 +2,7 @@
 <html>
   <head>
     <meta charset="UTF-8" />
-    <title>Hello World!</title>
+    <title>Cashflow Portfolio Analysis</title>
     <!-- https://developer.mozilla.org/en-US/docs/Web/HTTP/CSP -->
     <meta
       http-equiv="Content-Security-Policy"
@@ -14,21 +14,17 @@
     />
   </head>
   <body>
-    <div class="container">
-      <ul id="titles"></ul>
-      <div id="content" contenteditable="true">
-        <p>Select a title <br />  &#x2190</p>
-      </div>
-    </div>
+    <p>Set mean (%): <input type="number" id="parameter-mean" value="0.0"/></p>
+    <p>Set std (%): <input type="number" id="parameter-std" value="15.0"/></p>
 
-    <canvas id="myChart" width="400" height="400"></canvas>
+    <canvas id="myChart" width="600" height="400"></canvas>
     <div id="mytext"></div>
 
-    <h1>Hello World!</h1>
-    We are using Node.js <span id="node-version"></span>, Chromium
-    <span id="chrome-version"></span>, and Electron
-    <span id="electron-version"></span>.
-
+    <p>
+      We are using Node.js <span id="node-version"></span>, Chromium
+      <span id="chrome-version"></span>, and Electron
+      <span id="electron-version"></span>.
+    </p>
     <!-- You can also require other files to run in this process -->
     <script src="./dist/renderer.js"></script>
   </body>
