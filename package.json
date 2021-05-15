@@ -29,6 +29,7 @@
     "@types/chart.js": "^2.9.32",
     "@types/d3-random": "^2.2.0",
     "@types/lodash": "^4.14.169",
+    "chartjs-plugin-colorschemes": "^0.4.0",
     "d3": "^6.7.0",
     "d3-random": "^2.2.2",
     "electron-chartjs": "^1.0.0",
