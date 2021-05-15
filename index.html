@@ -14,20 +14,7 @@
     />
   </head>
   <body>
-    <div id="settings" border="1">
-      <p>Current dividend yield (%) <input type="number" id="global-parameter-dividend-yield" value="2.5"/> </p>
-      <p>Real dividend growth p.a. (%) <input type="number" id="global-parameter-dividend-growth" value="4"/> </p>
-      <p>
-        Inflation (%): <input type="number" id="global-parameter-inflation" value="2.0"/>
-        <input type="checkbox"/>Show inflation-adjusted ($)
-      </p>
-      <p>
-        Discount Rate p.a. (%) <input type="number" id="global-parameter-discount-rate" value="8"/></p>
-        Market price of $100 investment <input type="number" id="global-parameter-market-price" value="NaN"/>
-      </p>
-      <p>Long-term Market Return (%) <input type="number" id="global-parameter-long-term-market-return" disabled="true" value="NaN"/> </p>
-      <p><input type="button" id="global-save-settings" value="Save settings"/></p>
-    </div>
+    <div id="portfolio-forecast"> </div>
     <canvas id="summary-chart" width="600" height="400"></canvas>
 
     <p>Set mean (%): <input type="number" id="parameter-mean" value="0.0"/></p>

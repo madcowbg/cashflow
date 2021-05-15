@@ -7,6 +7,16 @@ import "chartjs-plugin-colorschemes";
 import { calcRandom, RandomSeriesData } from "./calc/randomdata";
 
 import { appSettings, saveSettings } from "./settings";
+import * as React from "react";
+import * as ReactDOM from "react-dom";
+import {
+  discountedDividends,
+  EconometricInputComponent,
+  EconomicParams,
+  nominalDividends,
+  realDividends,
+  recalculateMarketPriceOf100DollarInvestment,
+} from "./econometric";
 
 function toChartData(data: RandomSeriesData): ChartData {
   return {
@@ -77,70 +87,6 @@ function initLinkedChart(
   updater();
 }
 
-interface EconomicParams {
-  currentDividendYield?: number;
-  realDividendGrowth?: number;
-  inflation?: number;
-  marketPriceOf100DollarInvestment?: number;
-  discountRate?: number;
-}
-
-function nominalDividends(
-  monthsIdx: number[],
-  econParameters: EconomicParams
-): number[] {
-  return _.map(
-    monthsIdx,
-    (i) =>
-      100 *
-      econParameters.currentDividendYield *
-      Math.pow(
-        1 + (econParameters.realDividendGrowth + econParameters.inflation) / 12,
-        i
-      )
-  );
-}
-
-function realDividends(
-  monthsIdx: number[],
-  econParameters: EconomicParams
-): number[] {
-  return _.map(
-    monthsIdx,
-    (i) =>
-      100 *
-      econParameters.currentDividendYield *
-      Math.pow(1 + econParameters.realDividendGrowth / 12, i)
-  );
-}
-
-function discountedDividends(
-  monthsIdx: number[],
-  econParameters: EconomicParams
-): number[] {
-  return _.map(
-    monthsIdx,
-    (i) =>
-      100 *
-      econParameters.currentDividendYield *
-      Math.pow(
-        1 +
-          (econParameters.realDividendGrowth +
-            econParameters.inflation -
-            econParameters.discountRate) /
-            12,
-        i
-      )
-  );
-}
-
-function chain(firstOp: () => void, secondOp: () => void): () => void {
-  return () => {
-    firstOp();
-    secondOp();
-  };
-}
-
 window.addEventListener("DOMContentLoaded", () => {
   const replaceText = (selector: string, text: string) => {
     const element = document.getElementById(selector);
@@ -155,86 +101,6 @@ window.addEventListener("DOMContentLoaded", () => {
       process.versions[type as keyof NodeJS.ProcessVersions]
     );
   }
-
-  const btnSaveSettings = document.getElementById(
-    "global-save-settings"
-  ) as HTMLButtonElement;
-  btnSaveSettings.addEventListener("click", saveSettings);
-
-  const discountRateField = document.getElementById(
-    "global-parameter-discount-rate"
-  ) as HTMLInputElement;
-  const marketPriceOf100DollarInvestmentField = document.getElementById(
-    "global-parameter-market-price"
-  ) as HTMLInputElement;
-
-  const currentDividendYieldField = document.getElementById(
-    "global-parameter-dividend-yield"
-  ) as HTMLInputElement;
-  const realDividendGrowthField = document.getElementById(
-    "global-parameter-dividend-growth"
-  ) as HTMLInputElement;
-  const inflationField = document.getElementById(
-    "global-parameter-inflation"
-  ) as HTMLInputElement;
-
-  function recalculateMarketPriceOf1Dollar() {
-    const params = readParameters();
-
-    const marketPriceOf100DollarInvestment =
-      (100 * params.currentDividendYield) /
-      (params.discountRate - (params.realDividendGrowth + params.inflation));
-
-    marketPriceOf100DollarInvestmentField.value =
-      marketPriceOf100DollarInvestment.toFixed(2);
-  }
-
-  function recalculateDiscountRateField() {
-    const params = readParameters();
-    const discountRate =
-      params.realDividendGrowth +
-      params.inflation +
-      (100 * params.currentDividendYield) /
-        params.marketPriceOf100DollarInvestment;
-
-    discountRateField.value = (discountRate * 100).toFixed(2);
-  }
-
-  function readParameters(): EconomicParams {
-    return {
-      currentDividendYield: parseFloat(currentDividendYieldField.value) / 100,
-      realDividendGrowth: parseFloat(realDividendGrowthField.value) / 100,
-      inflation: parseFloat(inflationField.value) / 100,
-      marketPriceOf100DollarInvestment: parseFloat(
-        marketPriceOf100DollarInvestmentField.value
-      ),
-      discountRate: parseFloat(discountRateField.value) / 100,
-    };
-  }
-
-  discountRateField.addEventListener(
-    "change",
-    chain(recalculateMarketPriceOf1Dollar, recalculateChart)
-  );
-  marketPriceOf100DollarInvestmentField.addEventListener(
-    "change",
-    chain(recalculateDiscountRateField, recalculateChart)
-  );
-
-  currentDividendYieldField.addEventListener(
-    "change",
-    chain(recalculateMarketPriceOf1Dollar, recalculateChart)
-  );
-  realDividendGrowthField.addEventListener(
-    "change",
-    chain(recalculateMarketPriceOf1Dollar, recalculateChart)
-  );
-  inflationField.addEventListener(
-    "change",
-    chain(recalculateMarketPriceOf1Dollar, recalculateChart)
-  );
-
-  recalculateMarketPriceOf1Dollar();
 
   const summaryChartCanvas = document.getElementById(
     "summary-chart"
@@ -303,8 +169,7 @@ window.addEventListener("DOMContentLoaded", () => {
     },
   });
 
-  function recalculateChart() {
-    const econParameters = readParameters();
+  function recalculateChart(econParameters: EconomicParams): void {
     datasets.dividends_nominal.data = nominalDividends(
       monthsIdx,
       econParameters
@@ -317,7 +182,22 @@ window.addEventListener("DOMContentLoaded", () => {
     chart.update();
   }
 
-  recalculateChart();
+  ReactDOM.render(
+    React.createElement(EconometricInputComponent, {
+      data: {
+        currentDividendYield: 0.0154,
+        realDividendGrowth: 0.025,
+        inflation: 0.02,
+        marketPriceOf100DollarInvestment: 100,
+        discountRate: 0.085,
+        adjustForInflation: true,
+      },
+      onChange: function (this: EconometricInputComponent) {
+        recalculateChart(this.state);
+      },
+    }),
+    document.getElementById("portfolio-forecast")
+  );
 
   const inputMean = document.getElementById(
     "parameter-mean"
