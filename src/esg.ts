@@ -23,23 +23,36 @@ function dividendGrowth(economy: EconomicParams) {
 }
 
 export function noReinvestmentStrategy(
-  economy: EconomicParams,
+  futurePrice: number,
   vehicle: InvestmentVehicleAtTime,
   investment: Investment
 ): Outcome {
   const dividends =
     (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
-  const futurePrice = priceViaGordonEquation(
-    vehicle.currentAnnualDividends,
-    marketReturn(economy),
-    dividendGrowth(economy)
-  );
   return {
     time: vehicle.time,
     investment: { numberOfShares: investment.numberOfShares },
     investmentPrice: investment.numberOfShares * futurePrice,
     paidDividends: dividends,
     reinvestedDividends: 0,
+  };
+}
+
+export function fullReinvestmentStrategy(
+  futurePrice: number,
+  vehicle: InvestmentVehicleAtTime,
+  investment: Investment
+): Outcome {
+  const dividends =
+    (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
+
+  const futureShares = investment.numberOfShares + dividends / futurePrice;
+  return {
+    time: vehicle.time,
+    investment: { numberOfShares: futureShares },
+    investmentPrice: investment.numberOfShares * futurePrice,
+    paidDividends: 0,
+    reinvestedDividends: dividends,
   };
 }
 
@@ -59,43 +72,26 @@ function priceViaGordonEquation(
     : annualDividends / (discountRate - dividendGrowth);
 }
 
-export function fullReinvestmentStrategy(
-  economy: EconomicParams,
-  vehicle: InvestmentVehicleAtTime,
-  investment: Investment
-): Outcome {
-  const dividends =
-    (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
-  const futurePrice = priceViaGordonEquation(
-    vehicle.currentAnnualDividends,
-    marketReturn(economy),
-    dividendGrowth(economy)
-  );
-  const futureShares = investment.numberOfShares + dividends / futurePrice;
-  return {
-    time: vehicle.time,
-    investment: { numberOfShares: futureShares },
-    investmentPrice: investment.numberOfShares * futurePrice,
-    paidDividends: 0,
-    reinvestedDividends: dividends,
-  };
-}
-
 export function investOneMoreTime(
   economy: EconomicParams,
   vehicle: InvestmentVehicleAtTime,
   investment: Investment,
   strategy: (
-    economy: EconomicParams,
+    futurePrice: number,
     vehicle: InvestmentVehicleAtTime,
     investment: Investment
   ) => Outcome
 ): { outcome: Outcome; evolvedVehicle: InvestmentVehicleAtTime } {
+  const futurePrice = priceViaGordonEquation(
+    vehicle.currentAnnualDividends,
+    marketReturn(economy),
+    dividendGrowth(economy)
+  );
   return {
-    outcome: strategy.call(this, economy, vehicle, investment),
+    outcome: strategy(futurePrice, vehicle, investment),
     evolvedVehicle: {
       time: vehicle.time + 1,
-      currentPrice: vehicle.currentPrice,
+      currentPrice: futurePrice,
       currentAnnualDividends:
         vehicle.currentAnnualDividends * (1 + dividendGrowth(economy) / 12),
     },
