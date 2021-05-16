@@ -100,13 +100,6 @@ window.addEventListener("DOMContentLoaded", () => {
   ) as HTMLCanvasElement;
   const ctx = summaryChartCanvas.getContext("2d");
 
-  // const chart = new Chart(ctx, {
-  //   type: "line",
-  //   data: ,
-  //
-  //
-  // });
-
   ReactDOM.render(
     React.createElement(AnalysisComponent, {
       currentDividendYield: 0.0154,
