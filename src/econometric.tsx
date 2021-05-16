@@ -98,7 +98,6 @@ export class EconometricInputComponent extends React.Component<
         <p>
           <button onClick={() => saveSettings()}>Save settings</button>
         </p>
-        <button onClick={() => alert("clicked!")}>click me!</button>
       </div>
     );
   }

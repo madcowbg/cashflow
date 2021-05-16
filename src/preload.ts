@@ -10,6 +10,7 @@ import { appSettings } from "./settings";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
 import { AnalysisComponent } from "./analysis";
+import { ESGSimulation } from "./simulation";
 
 function toChartData(data: RandomSeriesData): ChartData {
   return {
@@ -100,6 +101,19 @@ window.addEventListener("DOMContentLoaded", () => {
   ) as HTMLCanvasElement;
   const ctx = summaryChartCanvas.getContext("2d");
 
+  ReactDOM.render(
+    React.createElement(ESGSimulation, {
+      params: {
+        currentDividendYield: 0.0154,
+        realDividendGrowth: 0.025,
+        inflation: 0.02,
+        marketPriceOf100DollarInvestment: 100,
+        discountRate: 0.085,
+        adjustForInflation: true,
+      },
+    }),
+    document.getElementById("portfolio-simulation")
+  );
   ReactDOM.render(
     React.createElement(AnalysisComponent, {
       currentDividendYield: 0.0154,
