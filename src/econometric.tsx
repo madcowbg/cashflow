@@ -3,10 +3,10 @@ import * as _ from "lodash";
 import { saveSettings } from "./settings";
 
 export class EconometricInputComponent extends React.Component<
-  { data: EconomicParams; onChange: (this: EconometricInputComponent) => void },
+  { data: EconomicParams; onChange: (newData: EconomicParams) => void },
   EconomicParams
 > {
-  private readonly onChange: (this: EconometricInputComponent) => void;
+  private readonly onChange: (newData: EconomicParams) => void;
   constructor(props: {
     data: EconomicParams;
     onChange: (this: EconometricInputComponent) => void;
@@ -14,7 +14,7 @@ export class EconometricInputComponent extends React.Component<
     super(props);
     this.state = recalculateMarketPriceOf100DollarInvestment(props.data);
     this.onChange = props.onChange;
-    this.onChange();
+    this.onChange(this.state);
   }
 
   handleChange(props: Partial<EconomicParams>): void {
@@ -22,7 +22,7 @@ export class EconometricInputComponent extends React.Component<
       _.assign({}, this.state, props)
     );
     this.setState(state);
-    this.onChange();
+    this.onChange(state);
   }
 
   render(): JSX.Element {

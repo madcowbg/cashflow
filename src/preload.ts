@@ -6,17 +6,10 @@ import "chartjs-plugin-colorschemes";
 
 import { calcRandom, RandomSeriesData } from "./calc/randomdata";
 
-import { appSettings, saveSettings } from "./settings";
+import { appSettings } from "./settings";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import {
-  discountedDividends,
-  EconometricInputComponent,
-  EconomicParams,
-  nominalDividends,
-  realDividends,
-  recalculateMarketPriceOf100DollarInvestment,
-} from "./econometric";
+import { AnalysisComponent } from "./analysis";
 
 function toChartData(data: RandomSeriesData): ChartData {
   return {
@@ -43,7 +36,7 @@ function createCharts(element: HTMLCanvasElement, data: ChartData): Chart {
     },
   });
 
-  chart.update({ duration: 500, lazy: false, easing: "linear" });
+  chart.update();
 
   console.log(chart.getDatasetMeta(0));
 
@@ -107,94 +100,21 @@ window.addEventListener("DOMContentLoaded", () => {
   ) as HTMLCanvasElement;
   const ctx = summaryChartCanvas.getContext("2d");
 
-  const monthsIdx = _.range(0, 100);
-  const datasets: {
-    dividends_nominal: ChartDataSets;
-    dividends_real: ChartDataSets;
-    dividends_discounted: ChartDataSets;
-  } = {
-    dividends_nominal: {
-      label: "Nominal dividends",
-      yAxisID: "$",
-      data: [],
-    },
-    dividends_real: {
-      label: "Real dividends",
-      yAxisID: "$",
-      data: [],
-    },
-    dividends_discounted: {
-      label: "Discounted dividends",
-      yAxisID: "$",
-      data: [],
-    },
-  };
-
-  const chart = new Chart(ctx, {
-    type: "line",
-    data: {
-      labels: _.map(_.range(0, 100), (i) => `month ${i + 1}`),
-      datasets: [
-        datasets.dividends_nominal,
-        datasets.dividends_real,
-        datasets.dividends_discounted,
-      ],
-    },
-
-    options: {
-      maintainAspectRatio: true,
-      responsive: false,
-      scales: {
-        yAxes: [
-          {
-            id: "$",
-            type: "linear",
-            position: "left",
-          },
-          {
-            id: "%",
-            type: "linear",
-            position: "right",
-            ticks: {
-              min: 0,
-            },
-          },
-        ],
-      },
-      plugins: {
-        colorschemes: {
-          scheme: "office.Focus6",
-        },
-      },
-    },
-  });
-
-  function recalculateChart(econParameters: EconomicParams): void {
-    datasets.dividends_nominal.data = nominalDividends(
-      monthsIdx,
-      econParameters
-    );
-    datasets.dividends_real.data = realDividends(monthsIdx, econParameters);
-    datasets.dividends_discounted.data = discountedDividends(
-      monthsIdx,
-      econParameters
-    );
-    chart.update();
-  }
+  // const chart = new Chart(ctx, {
+  //   type: "line",
+  //   data: ,
+  //
+  //
+  // });
 
   ReactDOM.render(
-    React.createElement(EconometricInputComponent, {
-      data: {
-        currentDividendYield: 0.0154,
-        realDividendGrowth: 0.025,
-        inflation: 0.02,
-        marketPriceOf100DollarInvestment: 100,
-        discountRate: 0.085,
-        adjustForInflation: true,
-      },
-      onChange: function (this: EconometricInputComponent) {
-        recalculateChart(this.state);
-      },
+    React.createElement(AnalysisComponent, {
+      currentDividendYield: 0.0154,
+      realDividendGrowth: 0.025,
+      inflation: 0.02,
+      marketPriceOf100DollarInvestment: 100,
+      discountRate: 0.085,
+      adjustForInflation: true,
     }),
     document.getElementById("portfolio-forecast")
   );
