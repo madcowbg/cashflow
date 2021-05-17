@@ -6,7 +6,8 @@
     "build": "tsc",
     "watch": "tsc -w",
     "lint": "eslint -c .eslintrc --ext .ts ./src",
-    "start": "npm run build && electron ./dist/main.js"
+    "start": "npm run build && electron ./dist/main.js",
+    "test": "mocha -r ts-node/register 'test/**/*.ts'"
   },
   "repository": "TODO",
   "keywords": [
@@ -18,10 +19,15 @@
   "author": "Bono Nonchev",
   "license": "CC-BY-NC-SA-4.0",
   "devDependencies": {
+    "@types/chai": "^4.2.18",
+    "@types/mocha": "^8.2.2",
     "@typescript-eslint/eslint-plugin": "^3.4.0",
     "@typescript-eslint/parser": "^3.4.0",
-    "eslint": "^7.3.1",
+    "chai": "^4.3.4",
     "electron": "^9.4.0",
+    "eslint": "^7.3.1",
+    "mocha": "^8.4.0",
+    "ts-node": "^9.1.1",
     "typescript": "^3.9.5"
   },
   "dependencies": {

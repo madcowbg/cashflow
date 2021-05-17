@@ -1,6 +1,7 @@
 import * as React from "react";
 import * as _ from "lodash";
 import { saveSettings } from "./settings";
+import { MarketParams } from "./esg";
 
 export class EconometricInputComponent extends React.Component<
   { data: EconomicParams; onChange: (newData: EconomicParams) => void },
@@ -103,10 +104,7 @@ export class EconometricInputComponent extends React.Component<
   }
 }
 
-export interface EconomicParams {
-  currentDividendYield: number;
-  realDividendGrowth: number;
-  inflation: number;
+export interface EconomicParams extends MarketParams {
   marketPriceOf100DollarInvestment: number;
   discountRate: number;
   adjustForInflation: boolean;

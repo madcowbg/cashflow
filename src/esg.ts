@@ -1,4 +1,8 @@
-import { EconomicParams } from "./econometric";
+export interface MarketParams {
+  currentDividendYield: number;
+  realDividendGrowth: number;
+  inflation: number;
+}
 
 export interface InvestmentVehicleAtTime {
   time: number;
@@ -18,7 +22,7 @@ export interface Outcome {
   reinvestedDividends: number;
 }
 
-function dividendGrowth(economy: EconomicParams) {
+export function dividendGrowth(economy: MarketParams) {
   return economy.realDividendGrowth + economy.inflation;
 }
 
@@ -73,7 +77,7 @@ function priceViaGordonEquation(
 }
 
 export function investOneMoreTime(
-  economy: EconomicParams,
+  economy: MarketParams,
   vehicle: InvestmentVehicleAtTime,
   investment: Investment,
   strategy: (
@@ -98,7 +102,7 @@ export function investOneMoreTime(
   };
 }
 
-export function marketReturn(params: EconomicParams) {
+export function marketReturn(params: MarketParams) {
   return (
     params.currentDividendYield + params.realDividendGrowth + params.inflation
   );
