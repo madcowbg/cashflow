@@ -2,8 +2,8 @@ import { expect } from "chai";
 import {
   dividendGrowth,
   fullReinvestmentStrategy,
-  Investment,
-  InvestmentVehicleAtTime,
+  Position,
+  Security,
   investOneMoreTime,
   MarketParams,
   marketReturn,
@@ -23,12 +23,12 @@ describe("ESG", () => {
     expect(dividendGrowth(params)).to.approximately(0.023, 1e-10);
   });
 
-  const investmentVehicle: InvestmentVehicleAtTime = {
+  const investmentVehicle: Security = {
     currentPrice: 100,
     currentAnnualDividends: 20,
     time: 1000,
   };
-  const investment: Investment = {
+  const investment: Position = {
     numberOfShares: 3,
   };
   it("should have one-step noReinvestmentStrategy with a particular outcome", () => {
@@ -36,9 +36,11 @@ describe("ESG", () => {
     expect(outcome).to.deep.equal({
       time: 1000,
       investment: { numberOfShares: 3 },
-      investmentPrice: 600,
-      paidDividends: 5,
-      reinvestedDividends: 0,
+      statistics: {
+        pv: 600,
+        paidDividends: 5,
+        reinvestedDividends: 0,
+      },
     });
   });
 
@@ -51,9 +53,11 @@ describe("ESG", () => {
     expect(outcome).to.deep.eq({
       time: 1000,
       investment: { numberOfShares: 3.025 },
-      investmentPrice: 600,
-      paidDividends: 0,
-      reinvestedDividends: 5,
+      statistics: {
+        pv: 600,
+        paidDividends: 0,
+        reinvestedDividends: 5,
+      },
     });
   });
 
@@ -68,9 +72,11 @@ describe("ESG", () => {
       outcome: {
         time: 1000,
         investment: { numberOfShares: 3.025 },
-        investmentPrice: 600,
-        paidDividends: 0,
-        reinvestedDividends: 5,
+        statistics: {
+          pv: 600,
+          paidDividends: 0,
+          reinvestedDividends: 5,
+        },
       },
       evolvedVehicle: {
         time: 1001,

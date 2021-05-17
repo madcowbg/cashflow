@@ -4,22 +4,26 @@ export interface MarketParams {
   inflation: number;
 }
 
-export interface InvestmentVehicleAtTime {
+export interface Security {
   time: number;
   currentPrice: number;
   currentAnnualDividends: number;
 }
 
-export interface Investment {
+export interface Position {
   numberOfShares: number;
+}
+
+export interface Statistics {
+  pv: number;
+  paidDividends: number;
+  reinvestedDividends: number;
 }
 
 export interface Outcome {
   time: number;
-  investment: Investment;
-  investmentPrice: number;
-  paidDividends: number;
-  reinvestedDividends: number;
+  investment: Position;
+  statistics: Statistics;
 }
 
 export function dividendGrowth(economy: MarketParams) {
@@ -28,24 +32,26 @@ export function dividendGrowth(economy: MarketParams) {
 
 export function noReinvestmentStrategy(
   futurePrice: number,
-  vehicle: InvestmentVehicleAtTime,
-  investment: Investment
+  vehicle: Security,
+  investment: Position
 ): Outcome {
   const dividends =
     (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
   return {
     time: vehicle.time,
     investment: { numberOfShares: investment.numberOfShares },
-    investmentPrice: investment.numberOfShares * futurePrice,
-    paidDividends: dividends,
-    reinvestedDividends: 0,
+    statistics: {
+      pv: investment.numberOfShares * futurePrice,
+      paidDividends: dividends,
+      reinvestedDividends: 0,
+    },
   };
 }
 
 export function fullReinvestmentStrategy(
   futurePrice: number,
-  vehicle: InvestmentVehicleAtTime,
-  investment: Investment
+  vehicle: Security,
+  investment: Position
 ): Outcome {
   const dividends =
     (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
@@ -54,9 +60,11 @@ export function fullReinvestmentStrategy(
   return {
     time: vehicle.time,
     investment: { numberOfShares: futureShares },
-    investmentPrice: investment.numberOfShares * futurePrice,
-    paidDividends: 0,
-    reinvestedDividends: dividends,
+    statistics: {
+      pv: investment.numberOfShares * futurePrice,
+      paidDividends: 0,
+      reinvestedDividends: dividends,
+    },
   };
 }
 
@@ -78,14 +86,14 @@ function priceViaGordonEquation(
 
 export function investOneMoreTime(
   economy: MarketParams,
-  vehicle: InvestmentVehicleAtTime,
-  investment: Investment,
+  vehicle: Security,
+  investment: Position,
   strategy: (
     futurePrice: number,
-    vehicle: InvestmentVehicleAtTime,
-    investment: Investment
+    vehicle: Security,
+    investment: Position
   ) => Outcome
-): { outcome: Outcome; evolvedVehicle: InvestmentVehicleAtTime } {
+): { outcome: Outcome; evolvedVehicle: Security } {
   const futurePrice = priceViaGordonEquation(
     vehicle.currentAnnualDividends,
     marketReturn(economy),

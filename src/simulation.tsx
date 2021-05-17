@@ -4,8 +4,8 @@ import { Line } from "react-chartjs-2";
 
 import { EconometricInputComponent, EconomicParams } from "./econometric";
 import {
-  Investment,
-  InvestmentVehicleAtTime,
+  Position,
+  Security,
   investOneMoreTime,
   marketReturn,
   noReinvestmentStrategy,
@@ -36,8 +36,8 @@ function fromParams(
   numberOfShares: number,
   initialInvestmentPrice: number
 ): {
-  initialInvestment: Investment;
-  initialInvestmentVehicle: InvestmentVehicleAtTime;
+  initialInvestment: Position;
+  initialInvestmentVehicle: Security;
 } {
   return {
     initialInvestment: { numberOfShares },
@@ -119,17 +119,17 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
             },
             {
               label: "Investment Current Market Price ($)",
-              data: _.map(outcomes, (o) => o.investmentPrice),
+              data: _.map(outcomes, (o) => o.statistics.investmentPrice),
               yAxisID: "$",
             },
             {
               label: "Paid Dividends ($)",
-              data: _.map(outcomes, (o) => o.paidDividends),
+              data: _.map(outcomes, (o) => o.statistics.paidDividends),
               yAxisID: "$ small",
             },
             {
               label: "Reinvested Dividends ($)",
-              data: _.map(outcomes, (o) => o.reinvestedDividends),
+              data: _.map(outcomes, (o) => o.statistics.reinvestedDividends),
               yAxisID: "$ small",
             },
             {
@@ -137,8 +137,10 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
               data: _.map(
                 outcomes,
                 (o) =>
-                  (((o.reinvestedDividends + o.paidDividends) * 12) /
-                    o.investmentPrice) *
+                  (((o.statistics.reinvestedDividends +
+                    o.statistics.paidDividends) *
+                    12) /
+                    o.statistics.investmentPrice) *
                   100
               ),
               yAxisID: "%",
@@ -178,8 +180,8 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   private gainsChart(
     monthsIdx: number[],
     outcomeOverTime: Outcome[],
-    investmentOverTime: Investment[],
-    investmentVehicleOverTime: InvestmentVehicleAtTime[]
+    investmentOverTime: Position[],
+    investmentVehicleOverTime: Security[]
   ) {
     return (
       <Line
@@ -193,8 +195,8 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
               data: _.map(
                 monthsIdx,
                 (i) =>
-                  outcomeOverTime[i].reinvestedDividends +
-                  outcomeOverTime[i].paidDividends
+                  outcomeOverTime[i].statistics.reinvestedDividends +
+                  outcomeOverTime[i].statistics.paidDividends
               ),
             },
             {
