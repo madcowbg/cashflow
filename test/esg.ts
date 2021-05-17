@@ -8,6 +8,7 @@ import {
   MarketParams,
   marketReturn,
   noReinvestmentStrategy,
+  calculateStatistics,
 } from "../src/esg";
 
 describe("ESG", () => {
@@ -36,6 +37,7 @@ describe("ESG", () => {
     expect(outcome).to.deep.equal({
       time: 1000,
       investment: { numberOfShares: 3 },
+      transactions: [{ dividend: 5 }],
       statistics: {
         pv: 600,
         paidDividends: 5,
@@ -45,19 +47,23 @@ describe("ESG", () => {
   });
 
   it("should have one-step fullReinvestmentStrategy with a particular outcome", () => {
+    const futurePrice = 200;
     const outcome = fullReinvestmentStrategy(
-      200,
+      futurePrice,
       investmentVehicle,
       investment
     );
     expect(outcome).to.deep.eq({
       time: 1000,
       investment: { numberOfShares: 3.025 },
-      statistics: {
-        pv: 600,
-        paidDividends: 0,
-        reinvestedDividends: 5,
-      },
+      transactions: [{ bought: 0.025, cost: 5 }, { dividend: 5 }],
+    });
+    expect(
+      calculateStatistics(futurePrice, outcome.investment, outcome.transactions)
+    ).to.deep.eq({
+      pv: 605,
+      paidDividends: 0,
+      reinvestedDividends: 5,
     });
   });
 
@@ -72,17 +78,78 @@ describe("ESG", () => {
       outcome: {
         time: 1000,
         investment: { numberOfShares: 3.025 },
-        statistics: {
-          pv: 600,
-          paidDividends: 0,
-          reinvestedDividends: 5,
-        },
+        transactions: [
+          {
+            bought: 0.025,
+            cost: 5,
+          },
+          { dividend: 5 },
+        ],
+      },
+      statistics: {
+        pv: 605,
+        paidDividends: 0,
+        reinvestedDividends: 5,
       },
       evolvedVehicle: {
         time: 1001,
         currentPrice: 200,
         currentAnnualDividends: 20.03833333333333,
       },
+    });
+  });
+  describe("calculateStatistics", () => {
+    it("should have produce zeros on empty inputs", () => {
+      const statistics = calculateStatistics(100, investment, []);
+      expect(statistics).to.deep.eq({
+        paidDividends: 0,
+        pv: 300,
+        reinvestedDividends: 0,
+      });
+    });
+    it("should aggregate all dividends", () => {
+      const statistics = calculateStatistics(100, investment, [
+        { dividend: 5 },
+        { dividend: 3 },
+      ]);
+      expect(statistics.paidDividends).to.eq(8);
+      expect(statistics).to.deep.eq({
+        paidDividends: 8,
+        pv: 300,
+        reinvestedDividends: 0,
+      });
+    });
+    it("should say what is bought are reinvested dividends", () => {
+      const statistics = calculateStatistics(100, investment, [
+        { dividend: 5 },
+        { dividend: 3 },
+        { bought: 3, cost: 4 },
+        { bought: 1, cost: 2 },
+      ]);
+      expect(statistics.reinvestedDividends).to.eq(6);
+      expect(statistics.paidDividends).to.eq(2);
+      expect(statistics).to.deep.eq({
+        paidDividends: 2,
+        pv: 300,
+        reinvestedDividends: 6,
+      });
+    });
+    it("should subtract sold from reinvested", () => {
+      const statistics = calculateStatistics(100, investment, [
+        { dividend: 5 },
+        { dividend: 3 },
+        { bought: 3, cost: 4 },
+        { bought: 1, cost: 2 },
+        { sold: 2, proceeds: 3 },
+        { sold: 2, proceeds: 1 },
+      ]);
+      expect(statistics.reinvestedDividends).to.eq(2);
+      expect(statistics.paidDividends).to.eq(6);
+      expect(statistics).to.deep.eq({
+        paidDividends: 6,
+        pv: 300,
+        reinvestedDividends: 2,
+      });
     });
   });
 });

@@ -10,6 +10,7 @@ import {
   marketReturn,
   noReinvestmentStrategy,
   Outcome,
+  Statistics,
 } from "./esg";
 
 class ESGProps {
@@ -71,10 +72,11 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     const investmentOverTime = [initialInvestment];
     const investmentVehicleOverTime = [initialInvestmentVehicle];
     const outcomeOverTime: Outcome[] = [];
+    const statisticsOverTime: Statistics[] = [];
 
     const MAX_TIME = 240;
     for (let i = 0; i < MAX_TIME; i++) {
-      const { outcome, evolvedVehicle } = investOneMoreTime(
+      const { outcome, evolvedVehicle, statistics } = investOneMoreTime(
         _.last(params),
         _.last(investmentVehicleOverTime),
         _.last(investmentOverTime),
@@ -84,6 +86,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       investmentVehicleOverTime.push(evolvedVehicle);
       investmentOverTime.push(outcome.investment);
       outcomeOverTime.push(outcome);
+      statisticsOverTime.push(statistics);
     }
 
     const monthsIdx = _.map(outcomeOverTime, (o) => o.time);
@@ -93,18 +96,23 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           data={this.state.params}
           onChange={(data) => this.onChange(data)}
         />
-        {this.summaryChart(monthsIdx, outcomeOverTime)}
+        {this.summaryChart(monthsIdx, outcomeOverTime, statisticsOverTime)}
         {this.gainsChart(
           monthsIdx,
           outcomeOverTime,
           investmentOverTime,
-          investmentVehicleOverTime
+          investmentVehicleOverTime,
+          statisticsOverTime
         )}
       </div>
     );
   }
 
-  private summaryChart(monthsIdx: number[], outcomes: Outcome[]) {
+  private summaryChart(
+    monthsIdx: number[],
+    outcomes: Outcome[],
+    statistics: Statistics[]
+  ) {
     return (
       <Line
         width={800}
@@ -119,28 +127,25 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
             },
             {
               label: "Investment Current Market Price ($)",
-              data: _.map(outcomes, (o) => o.statistics.investmentPrice),
+              data: _.map(statistics, (s) => s.pv),
               yAxisID: "$",
             },
             {
               label: "Paid Dividends ($)",
-              data: _.map(outcomes, (o) => o.statistics.paidDividends),
+              data: _.map(statistics, (s) => s.paidDividends),
               yAxisID: "$ small",
             },
             {
               label: "Reinvested Dividends ($)",
-              data: _.map(outcomes, (o) => o.statistics.reinvestedDividends),
+              data: _.map(statistics, (s) => s.reinvestedDividends),
               yAxisID: "$ small",
             },
             {
-              label: "Current Dividend Yield (%)",
+              label: "Realized Dividend Yield (%)",
               data: _.map(
-                outcomes,
-                (o) =>
-                  (((o.statistics.reinvestedDividends +
-                    o.statistics.paidDividends) *
-                    12) /
-                    o.statistics.investmentPrice) *
+                statistics,
+                (s) =>
+                  (((s.reinvestedDividends + s.paidDividends) * 12) / s.pv) *
                   100
               ),
               yAxisID: "%",
@@ -181,7 +186,8 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     monthsIdx: number[],
     outcomeOverTime: Outcome[],
     investmentOverTime: Position[],
-    investmentVehicleOverTime: Security[]
+    investmentVehicleOverTime: Security[],
+    statisticsOverTime: Statistics[]
   ) {
     return (
       <Line
@@ -195,8 +201,8 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
               data: _.map(
                 monthsIdx,
                 (i) =>
-                  outcomeOverTime[i].statistics.reinvestedDividends +
-                  outcomeOverTime[i].statistics.paidDividends
+                  statisticsOverTime[i].reinvestedDividends +
+                  statisticsOverTime[i].paidDividends
               ),
             },
             {
