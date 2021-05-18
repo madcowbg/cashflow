@@ -156,6 +156,41 @@ export function investOneMoreTime(
   };
 }
 
+export interface MarketSentiment {
+  discountRate: number;
+}
+
+function changeWithSentiment(
+  economy: MarketParams,
+  sentiment: MarketSentiment
+): MarketParams {
+  return _.assign({}, economy, {
+    currentDividendYield:
+      sentiment.discountRate - economy.inflation - economy.realDividendGrowth,
+  });
+}
+
+export function evolveMarket(
+  economy: MarketParams,
+  sentiment: MarketSentiment,
+  vehicle: Security
+): [MarketParams, Security] {
+  const evolvedEconomy = changeWithSentiment(economy, sentiment);
+  const futurePrice = priceViaGordonEquation(
+    vehicle.currentAnnualDividends,
+    marketReturn(evolvedEconomy),
+    dividendGrowth(evolvedEconomy)
+  );
+  const evolvedVehicle = {
+    time: vehicle.time + 1,
+    currentPrice: futurePrice,
+    currentAnnualDividends:
+      vehicle.currentAnnualDividends * (1 + dividendGrowth(economy) / 12),
+  };
+
+  return [evolvedEconomy, evolvedVehicle];
+}
+
 export function marketReturn(params: MarketParams) {
   return (
     params.currentDividendYield + params.realDividendGrowth + params.inflation

@@ -9,7 +9,9 @@ import {
   marketReturn,
   noReinvestmentStrategy,
   calculateStatistics,
+  evolveMarket,
 } from "../src/calc/esg";
+import _ = require("lodash");
 
 describe("ESG", () => {
   const params: MarketParams = {
@@ -149,6 +151,50 @@ describe("ESG", () => {
         paidDividends: 6,
         fv: 300,
         reinvestedDividends: 2,
+      });
+    });
+  });
+
+  const security: Security = {
+    currentAnnualDividends: 1,
+    currentPrice: 100,
+    time: 0,
+  };
+  describe("evolveMarket", () => {
+    it("should have implied discountRate equal to the marketReturn", () => {
+      const impliedSentiment = { discountRate: marketReturn(params) };
+      const [newParams, newSecurity] = evolveMarket(
+        params,
+        impliedSentiment,
+        security
+      );
+
+      expect(newParams).to.deep.eq(params);
+      expect(newSecurity).to.deep.eq({
+        currentAnnualDividends: 1.0019166666666666,
+        currentPrice: 10,
+        time: 1,
+      });
+      expect(impliedSentiment).to.deep.eq({
+        discountRate: 0.12300000000000001,
+      });
+    });
+
+    it("should change required dividend yield by market sentiment", () => {
+      const [newParams, newSecurity] = evolveMarket(
+        params,
+        { discountRate: 0.055 },
+        security
+      );
+      expect(newParams).to.deep.eq(
+        _.assign({}, params, {
+          currentDividendYield: 0.032,
+        })
+      );
+      expect(newSecurity).to.deep.eq({
+        currentAnnualDividends: 1.0019166666666666,
+        currentPrice: 31.249999999999993,
+        time: 1,
       });
     });
   });
