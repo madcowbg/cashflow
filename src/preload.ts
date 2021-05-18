@@ -9,8 +9,8 @@ import { calcRandom, RandomSeriesData } from "./calc/randomdata";
 import { appSettings } from "./settings";
 import * as React from "react";
 import * as ReactDOM from "react-dom";
-import { AnalysisComponent } from "./analysis";
-import { ESGSimulation } from "./simulation";
+import { AnalysisComponent } from "./component/analysis";
+import { ESGSimulation } from "./component/simulation";
 
 function toChartData(data: RandomSeriesData): ChartData {
   return {

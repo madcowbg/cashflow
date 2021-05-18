@@ -9,7 +9,7 @@ import {
   marketReturn,
   noReinvestmentStrategy,
   calculateStatistics,
-} from "../src/esg";
+} from "../src/calc/esg";
 
 describe("ESG", () => {
   const params: MarketParams = {

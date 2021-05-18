@@ -9,7 +9,7 @@ import {
   EconometricInputComponent,
   nominalDividends,
   realDividends,
-} from "./econometric";
+} from "../calc/econometric";
 
 interface AnalysisDatasets {
   dividends_nominal: ChartDataSets;

@@ -1,6 +1,6 @@
 import * as React from "react";
 import * as _ from "lodash";
-import { saveSettings } from "./settings";
+import { saveSettings } from "../settings";
 import { MarketParams } from "./esg";
 
 export class EconometricInputComponent extends React.Component<

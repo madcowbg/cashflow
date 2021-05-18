@@ -2,7 +2,7 @@ import _ from "lodash";
 import * as React from "react";
 import { Line } from "react-chartjs-2";
 
-import { EconometricInputComponent, EconomicParams } from "./econometric";
+import { EconometricInputComponent, EconomicParams } from "../calc/econometric";
 import {
   Position,
   Security,
@@ -11,7 +11,7 @@ import {
   noReinvestmentStrategy,
   Outcome,
   Statistics,
-} from "./esg";
+} from "../calc/esg";
 
 class ESGProps {
   params: EconomicParams;
