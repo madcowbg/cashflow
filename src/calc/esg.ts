@@ -1,19 +1,16 @@
 import * as _ from "lodash";
 
 export interface MarketParams {
-  currentDividendYield: number;
-  realDividendGrowth: number;
-  inflation: number;
+  inflation: number; // %
 }
 
 export interface Security {
-  time: number;
-  currentPrice: number;
-  currentAnnualDividends: number;
+  currentAnnualDividends: number; // $
+  realDividendGrowth: number; // %
 }
 
 export interface Position {
-  numberOfShares: number;
+  numberOfShares: number; // #
 }
 
 export interface Statistics {
@@ -33,8 +30,11 @@ export interface Outcome {
   transactions: Transaction[];
 }
 
-export function dividendGrowth(economy: MarketParams) {
-  return economy.realDividendGrowth + economy.inflation;
+export function dividendGrowth(
+  security: Security,
+  economy: MarketParams
+): number {
+  return security.realDividendGrowth + economy.inflation;
 }
 
 function aggregated(transactions: Transaction[]): {
@@ -58,7 +58,7 @@ export function calculateStatistics(
   futurePrice: number,
   investment: Position,
   transactions: Transaction[]
-) {
+): Statistics {
   const { totalDividends, totalBought, totalSold } = aggregated(transactions);
   return {
     fv: investment.numberOfShares * futurePrice,
@@ -68,6 +68,7 @@ export function calculateStatistics(
 }
 
 export function noReinvestmentStrategy(
+  time: number,
   futurePrice: number,
   vehicle: Security,
   investment: Position
@@ -75,7 +76,7 @@ export function noReinvestmentStrategy(
   const dividends =
     (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
   const obj = {
-    time: vehicle.time,
+    time: time,
     investment: { numberOfShares: investment.numberOfShares },
     transactions: [{ dividend: dividends }],
   };
@@ -89,21 +90,22 @@ export function noReinvestmentStrategy(
 }
 
 export function fullReinvestmentStrategy(
+  time: number,
   futurePrice: number,
   vehicle: Security,
   investment: Position
 ): Outcome {
-  const dividends =
+  const accruedDividends =
     (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
 
-  const boughtShares = dividends / futurePrice;
+  const boughtShares = accruedDividends / futurePrice;
   const futureShares = investment.numberOfShares + boughtShares;
   return {
-    time: vehicle.time,
+    time: time,
     investment: { numberOfShares: futureShares },
     transactions: [
-      { bought: boughtShares, cost: dividends },
-      { dividend: dividends },
+      { bought: boughtShares, cost: accruedDividends },
+      { dividend: accruedDividends },
     ],
   };
 }
@@ -124,28 +126,44 @@ function priceViaGordonEquation(
     : annualDividends / (discountRate - dividendGrowth);
 }
 
+export function currentYield(vehicle: Security, currentPrice: number) {
+  return vehicle.currentAnnualDividends / currentPrice;
+}
+
+export function impliedSentiment(
+  vehicle: Security,
+  currentPrice: number,
+  economy: MarketParams
+): MarketSentiment {
+  return {
+    discountRate:
+      currentYield(vehicle, currentPrice) +
+      vehicle.realDividendGrowth +
+      economy.inflation,
+  };
+}
+
 export function investOneMoreTime(
+  time: number,
   economy: MarketParams,
   vehicle: Security,
   investment: Position,
+  sentiment: MarketSentiment,
   strategy: (
+    time: number,
     futurePrice: number,
     vehicle: Security,
     investment: Position
   ) => Outcome
 ): { outcome: Outcome; statistics: Statistics; evolvedVehicle: Security } {
-  const impliedSentiment = { discountRate: marketReturn(economy) };
-  const [newParams, futureVehicle] = evolveMarket(
-    economy,
-    impliedSentiment,
-    vehicle
-  );
+  const futureVehicle = evolveVehicle(economy, vehicle);
+  const futurePrice = priceDDM(futureVehicle, economy, sentiment);
 
-  const outcome = strategy(futureVehicle.currentPrice, vehicle, investment);
+  const outcome = strategy(time, futurePrice, vehicle, investment);
   return {
     outcome: outcome,
     statistics: calculateStatistics(
-      futureVehicle.currentPrice,
+      futurePrice,
       outcome.investment,
       outcome.transactions
     ),
@@ -157,39 +175,26 @@ export interface MarketSentiment {
   discountRate: number;
 }
 
-function changeWithSentiment(
+export function evolveVehicle(
+  economy: MarketParams,
+  vehicle: Security
+): Security {
+  return {
+    currentAnnualDividends:
+      vehicle.currentAnnualDividends *
+      (1 + dividendGrowth(vehicle, economy) / 12),
+    realDividendGrowth: vehicle.realDividendGrowth,
+  };
+}
+
+export function priceDDM(
+  security: Security,
   economy: MarketParams,
   sentiment: MarketSentiment
-): MarketParams {
-  return _.assign({}, economy, {
-    currentDividendYield:
-      sentiment.discountRate - economy.inflation - economy.realDividendGrowth,
-  });
-}
-
-export function evolveMarket(
-  economy: MarketParams,
-  sentiment: MarketSentiment,
-  vehicle: Security
-): [MarketParams, Security] {
-  const evolvedEconomy = changeWithSentiment(economy, sentiment);
-  const futurePrice = priceViaGordonEquation(
-    vehicle.currentAnnualDividends,
-    marketReturn(evolvedEconomy),
-    dividendGrowth(evolvedEconomy)
-  );
-  const evolvedVehicle = {
-    time: vehicle.time + 1,
-    currentPrice: futurePrice,
-    currentAnnualDividends:
-      vehicle.currentAnnualDividends * (1 + dividendGrowth(economy) / 12),
-  };
-
-  return [evolvedEconomy, evolvedVehicle];
-}
-
-export function marketReturn(params: MarketParams) {
-  return (
-    params.currentDividendYield + params.realDividendGrowth + params.inflation
+): number {
+  return priceViaGordonEquation(
+    security.currentAnnualDividends,
+    sentiment.discountRate,
+    dividendGrowth(security, economy)
   );
 }

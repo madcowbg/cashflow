@@ -1,41 +1,56 @@
 import { expect } from "chai";
 import {
+  calculateStatistics,
+  currentYield,
   dividendGrowth,
+  evolveVehicle,
   fullReinvestmentStrategy,
-  Position,
-  Security,
+  impliedSentiment,
   investOneMoreTime,
   MarketParams,
-  marketReturn,
+  MarketSentiment,
   noReinvestmentStrategy,
-  calculateStatistics,
-  evolveMarket,
+  Position,
+  priceDDM,
+  Security,
 } from "../src/calc/esg";
 import _ = require("lodash");
 
 describe("ESG", () => {
   const params: MarketParams = {
-    currentDividendYield: 0.1,
     inflation: 0.02,
+  };
+  const investmentSecurity: Security = {
+    currentAnnualDividends: 1.1,
     realDividendGrowth: 0.003,
   };
-  it("should compute marketReturn as sum of dividend return, dividend growth and inflation", () => {
-    expect(marketReturn(params)).to.approximately(0.123, 1e-10);
-  });
   it("should compute nominal dividend growth as sum of real plus inflation", () => {
-    expect(dividendGrowth(params)).to.approximately(0.023, 1e-10);
+    expect(dividendGrowth(investmentSecurity, params)).to.approximately(
+      0.023,
+      1e-10
+    );
+  });
+  it("should have currentYield a specific number", () => {
+    expect(currentYield(investmentSecurity, 100)).to.approximately(
+      0.011,
+      1e-10
+    );
   });
 
   const investmentVehicle: Security = {
-    currentPrice: 100,
     currentAnnualDividends: 20,
-    time: 1000,
+    realDividendGrowth: 0.003,
   };
   const investment: Position = {
     numberOfShares: 3,
   };
   it("should have one-step noReinvestmentStrategy with a particular outcome", () => {
-    const outcome = noReinvestmentStrategy(200, investmentVehicle, investment);
+    const outcome = noReinvestmentStrategy(
+      1000,
+      200,
+      investmentVehicle,
+      investment
+    );
     expect(outcome).to.deep.equal({
       time: 1000,
       investment: { numberOfShares: 3 },
@@ -51,6 +66,7 @@ describe("ESG", () => {
   it("should have one-step fullReinvestmentStrategy with a particular outcome", () => {
     const futurePrice = 200;
     const outcome = fullReinvestmentStrategy(
+      1000,
       futurePrice,
       investmentVehicle,
       investment
@@ -70,33 +86,35 @@ describe("ESG", () => {
   });
 
   it("should have investOneMoreTime produce a particular result", () => {
+    const sentiment = impliedSentiment(investmentVehicle, 200, params);
     const result = investOneMoreTime(
+      1000,
       params,
       investmentVehicle,
       investment,
+      sentiment,
       fullReinvestmentStrategy
     );
     expect(result).to.be.deep.eq({
       outcome: {
         time: 1000,
-        investment: { numberOfShares: 3.025 },
+        investment: { numberOfShares: 3.0249521749979205 },
         transactions: [
           {
-            bought: 0.025,
+            bought: 0.024952174997920656,
             cost: 5,
           },
           { dividend: 5 },
         ],
       },
       statistics: {
-        fv: 605,
+        fv: 606.1499999999999,
         paidDividends: 0,
         reinvestedDividends: 5,
       },
       evolvedVehicle: {
-        time: 1001,
-        currentPrice: 200,
         currentAnnualDividends: 20.03833333333333,
+        realDividendGrowth: 0.003,
       },
     });
   });
@@ -157,45 +175,39 @@ describe("ESG", () => {
 
   const security: Security = {
     currentAnnualDividends: 1,
-    currentPrice: 100,
-    time: 0,
+    realDividendGrowth: 0.003,
   };
   describe("evolveMarket", () => {
-    it("should have implied discountRate equal to the marketReturn", () => {
-      const impliedSentiment = { discountRate: marketReturn(params) };
-      const [newParams, newSecurity] = evolveMarket(
-        params,
-        impliedSentiment,
-        security
-      );
-
-      expect(newParams).to.deep.eq(params);
-      expect(newSecurity).to.deep.eq({
-        currentAnnualDividends: 1.0019166666666666,
-        currentPrice: 10,
-        time: 1,
-      });
-      expect(impliedSentiment).to.deep.eq({
+    it("should have implied sentiment a particular value", () => {
+      expect(impliedSentiment(security, 10, params)).to.deep.eq({
         discountRate: 0.12300000000000001,
       });
     });
 
-    it("should change required dividend yield by market sentiment", () => {
-      const [newParams, newSecurity] = evolveMarket(
-        params,
-        { discountRate: 0.055 },
-        security
-      );
-      expect(newParams).to.deep.eq(
-        _.assign({}, params, {
-          currentDividendYield: 0.032,
-        })
-      );
+    it("should have implied discountRate equal to the marketReturn", () => {
+      const newSecurity = evolveVehicle(params, security);
+
       expect(newSecurity).to.deep.eq({
         currentAnnualDividends: 1.0019166666666666,
-        currentPrice: 31.249999999999993,
-        time: 1,
+        realDividendGrowth: 0.003,
       });
+    });
+
+    it("should change required dividend yield by market sentiment", () => {
+      const newSecurity = evolveVehicle(params, security);
+
+      expect(newSecurity).to.deep.eq({
+        currentAnnualDividends: 1.0019166666666666,
+        realDividendGrowth: 0.003,
+      });
+
+      const sentiment: MarketSentiment = { discountRate: 0.055 };
+      const newPrice = priceDDM(security, params, sentiment);
+      expect(newPrice).to.approximately(31.25, 1e-10);
+      expect(currentYield(newSecurity, newPrice)).to.approximately(
+        0.0320613333333,
+        1e-10
+      );
     });
   });
 });

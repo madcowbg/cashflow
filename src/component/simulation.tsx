@@ -7,10 +7,12 @@ import {
   Position,
   Security,
   investOneMoreTime,
-  marketReturn,
   noReinvestmentStrategy,
   Outcome,
   Statistics,
+  currentYield,
+  impliedSentiment,
+  fullReinvestmentStrategy,
 } from "../calc/esg";
 
 class ESGProps {
@@ -22,14 +24,20 @@ class ESGState {
   startingPV: number;
 }
 
-function investmentValue(
+function theoreticInvestmentValue(
   initialValue: number,
   params: EconomicParams,
+  security: Security,
+  initialPrice: number,
   monthsIdx: number[]
 ): number[] {
+  const expectedMarketReturn =
+    currentYield(security, initialPrice) +
+    security.realDividendGrowth +
+    params.inflation;
   return _.map(
     monthsIdx,
-    (i) => initialValue * Math.pow(1 + marketReturn(params) / 12, i)
+    (i) => initialValue * Math.pow(1 + expectedMarketReturn / 12, i + 1)
   );
 }
 
@@ -44,10 +52,9 @@ function fromParams(
   return {
     initialInvestment: { numberOfShares },
     initialInvestmentVehicle: {
-      time: 0,
-      currentPrice: initialInvestmentPrice,
       currentAnnualDividends:
         initialInvestmentPrice * params.currentDividendYield,
+      realDividendGrowth: params.realDividendGrowth,
     },
   };
 }
@@ -69,6 +76,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       investmentVehicleOverTime,
       outcomeOverTime,
       statisticsOverTime,
+      initialSecurity,
     } = this.calculateDatasets();
 
     const monthsIdx = _.map(outcomeOverTime, (o) => o.time);
@@ -88,7 +96,12 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           data={this.state.params}
           onChange={(data) => this.onChange(data)}
         />
-        {this.summaryChart(monthsIdx, outcomeOverTime, statisticsOverTime)}
+        {this.summaryChart(
+          monthsIdx,
+          outcomeOverTime,
+          statisticsOverTime,
+          initialSecurity
+        )}
         {this.gainsChart(
           monthsIdx,
           outcomeOverTime,
@@ -115,13 +128,21 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     const statisticsOverTime: Statistics[] = [];
 
     const MAX_TIME = 240;
+    const sentiment = impliedSentiment(
+      initialInvestmentVehicle,
+      100,
+      this.state.params
+    );
+
     for (let i = 0; i < MAX_TIME; i++) {
       const { outcome, evolvedVehicle, statistics } = investOneMoreTime(
+        i,
         _.last(params),
         _.last(investmentVehicleOverTime),
         _.last(investmentOverTime),
-        // fullReinvestmentStrategy
-        noReinvestmentStrategy
+        sentiment,
+        fullReinvestmentStrategy
+        // noReinvestmentStrategy
       );
       investmentVehicleOverTime.push(evolvedVehicle);
       investmentOverTime.push(outcome.investment);
@@ -133,13 +154,15 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       investmentVehicleOverTime,
       outcomeOverTime,
       statisticsOverTime,
+      initialSecurity: initialInvestmentVehicle,
     };
   }
 
   private summaryChart(
     monthsIdx: number[],
     outcomes: Outcome[],
-    statistics: Statistics[]
+    statistics: Statistics[],
+    security: Security
   ) {
     return (
       <Line
@@ -150,7 +173,13 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           datasets: [
             {
               label: "Theoretic Fully Rebalanced Investment Value ($)",
-              data: investmentValue(100, this.state.params, monthsIdx),
+              data: theoreticInvestmentValue(
+                this.state.startingPV,
+                this.state.params,
+                security,
+                100,
+                monthsIdx
+              ),
               yAxisID: "$",
             },
             {
@@ -238,9 +267,8 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
               data: _.map(
                 monthsIdx,
                 (i) =>
-                  investmentOverTime[i].numberOfShares *
-                  (investmentVehicleOverTime[i].currentPrice -
-                    investmentVehicleOverTime[Math.max(0, i - 1)].currentPrice)
+                  statisticsOverTime[i].fv -
+                  statisticsOverTime[Math.max(0, i - 1)].fv
               ),
             },
           ],

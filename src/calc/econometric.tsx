@@ -108,6 +108,8 @@ export interface EconomicParams extends MarketParams {
   marketPriceOf100DollarInvestment: number;
   discountRate: number;
   adjustForInflation: boolean;
+  currentDividendYield: number;
+  realDividendGrowth: number;
 }
 
 export function nominalDividends(
