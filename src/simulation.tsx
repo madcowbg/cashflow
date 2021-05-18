@@ -127,7 +127,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
             },
             {
               label: "Investment Current Market Price ($)",
-              data: _.map(statistics, (s) => s.pv),
+              data: _.map(statistics, (s) => s.fv),
               yAxisID: "$",
             },
             {
@@ -145,7 +145,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
               data: _.map(
                 statistics,
                 (s) =>
-                  (((s.reinvestedDividends + s.paidDividends) * 12) / s.pv) *
+                  (((s.reinvestedDividends + s.paidDividends) * 12) / s.fv) *
                   100
               ),
               yAxisID: "%",

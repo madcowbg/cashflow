@@ -17,7 +17,7 @@ export interface Position {
 }
 
 export interface Statistics {
-  pv: number;
+  fv: number;
   paidDividends: number;
   reinvestedDividends: number;
 }
@@ -61,7 +61,7 @@ export function calculateStatistics(
 ) {
   const { totalDividends, totalBought, totalSold } = aggregated(transactions);
   return {
-    pv: investment.numberOfShares * futurePrice,
+    fv: investment.numberOfShares * futurePrice,
     paidDividends: totalDividends - totalBought + totalSold,
     reinvestedDividends: totalBought - totalSold,
   };

@@ -39,7 +39,7 @@ describe("ESG", () => {
       investment: { numberOfShares: 3 },
       transactions: [{ dividend: 5 }],
       statistics: {
-        pv: 600,
+        fv: 600,
         paidDividends: 5,
         reinvestedDividends: 0,
       },
@@ -61,7 +61,7 @@ describe("ESG", () => {
     expect(
       calculateStatistics(futurePrice, outcome.investment, outcome.transactions)
     ).to.deep.eq({
-      pv: 605,
+      fv: 605,
       paidDividends: 0,
       reinvestedDividends: 5,
     });
@@ -87,7 +87,7 @@ describe("ESG", () => {
         ],
       },
       statistics: {
-        pv: 605,
+        fv: 605,
         paidDividends: 0,
         reinvestedDividends: 5,
       },
@@ -103,7 +103,7 @@ describe("ESG", () => {
       const statistics = calculateStatistics(100, investment, []);
       expect(statistics).to.deep.eq({
         paidDividends: 0,
-        pv: 300,
+        fv: 300,
         reinvestedDividends: 0,
       });
     });
@@ -115,7 +115,7 @@ describe("ESG", () => {
       expect(statistics.paidDividends).to.eq(8);
       expect(statistics).to.deep.eq({
         paidDividends: 8,
-        pv: 300,
+        fv: 300,
         reinvestedDividends: 0,
       });
     });
@@ -130,7 +130,7 @@ describe("ESG", () => {
       expect(statistics.paidDividends).to.eq(2);
       expect(statistics).to.deep.eq({
         paidDividends: 2,
-        pv: 300,
+        fv: 300,
         reinvestedDividends: 6,
       });
     });
@@ -147,7 +147,7 @@ describe("ESG", () => {
       expect(statistics.paidDividends).to.eq(6);
       expect(statistics).to.deep.eq({
         paidDividends: 6,
-        pv: 300,
+        fv: 300,
         reinvestedDividends: 2,
       });
     });
