@@ -19,6 +19,7 @@ class ESGProps {
 
 class ESGState {
   params: EconomicParams;
+  startingPV: number;
 }
 
 function investmentValue(
@@ -54,7 +55,7 @@ function fromParams(
 export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   constructor(props: ESGProps) {
     super(props);
-    this.state = { params: props.params };
+    this.state = { params: props.params, startingPV: 250000 };
   }
 
   onChange(params: EconomicParams) {
@@ -63,10 +64,49 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   }
 
   render() {
+    const {
+      investmentOverTime,
+      investmentVehicleOverTime,
+      outcomeOverTime,
+      statisticsOverTime,
+    } = this.calculateDatasets();
+
+    const monthsIdx = _.map(outcomeOverTime, (o) => o.time);
+    return (
+      <div>
+        <p>
+          Initial investment size:{" "}
+          <input
+            type="number"
+            value={this.state.startingPV}
+            onChange={(e) =>
+              this.onChangeStartingPV(parseFloat(e.target.value))
+            }
+          />{" "}
+        </p>
+        <EconometricInputComponent
+          data={this.state.params}
+          onChange={(data) => this.onChange(data)}
+        />
+        {this.summaryChart(monthsIdx, outcomeOverTime, statisticsOverTime)}
+        {this.gainsChart(
+          monthsIdx,
+          outcomeOverTime,
+          investmentOverTime,
+          investmentVehicleOverTime,
+          statisticsOverTime
+        )}
+      </div>
+    );
+  }
+
+  private calculateDatasets() {
+    const initialInvestmentPrice = 100;
+    const numberOfShares = this.state.startingPV / initialInvestmentPrice;
     const { initialInvestment, initialInvestmentVehicle } = fromParams(
       this.state.params,
-      1,
-      100
+      numberOfShares,
+      initialInvestmentPrice
     );
     const params = [this.state.params];
     const investmentOverTime = [initialInvestment];
@@ -88,24 +128,12 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       outcomeOverTime.push(outcome);
       statisticsOverTime.push(statistics);
     }
-
-    const monthsIdx = _.map(outcomeOverTime, (o) => o.time);
-    return (
-      <div>
-        <EconometricInputComponent
-          data={this.state.params}
-          onChange={(data) => this.onChange(data)}
-        />
-        {this.summaryChart(monthsIdx, outcomeOverTime, statisticsOverTime)}
-        {this.gainsChart(
-          monthsIdx,
-          outcomeOverTime,
-          investmentOverTime,
-          investmentVehicleOverTime,
-          statisticsOverTime
-        )}
-      </div>
-    );
+    return {
+      investmentOverTime,
+      investmentVehicleOverTime,
+      outcomeOverTime,
+      statisticsOverTime,
+    };
   }
 
   private summaryChart(
@@ -230,5 +258,9 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         }}
       />
     );
+  }
+
+  private onChangeStartingPV(startingPV: number): void {
+    this.setState({ startingPV: startingPV });
   }
 }

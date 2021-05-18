@@ -35,7 +35,6 @@ export class AnalysisComponent extends React.Component<
   }
 
   onChangeParams(econParams: EconomicParams): void {
-    console.log(`new params: ${JSON.stringify(econParams)}`);
     this.setState({
       econParams: econParams,
       datasets: calculateDatasets(econParams),
