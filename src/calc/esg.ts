@@ -134,25 +134,22 @@ export function investOneMoreTime(
     investment: Position
   ) => Outcome
 ): { outcome: Outcome; statistics: Statistics; evolvedVehicle: Security } {
-  const futurePrice = priceViaGordonEquation(
-    vehicle.currentAnnualDividends,
-    marketReturn(economy),
-    dividendGrowth(economy)
+  const impliedSentiment = { discountRate: marketReturn(economy) };
+  const [newParams, futureVehicle] = evolveMarket(
+    economy,
+    impliedSentiment,
+    vehicle
   );
-  const outcome = strategy(futurePrice, vehicle, investment);
+
+  const outcome = strategy(futureVehicle.currentPrice, vehicle, investment);
   return {
     outcome: outcome,
     statistics: calculateStatistics(
-      futurePrice,
+      futureVehicle.currentPrice,
       outcome.investment,
       outcome.transactions
     ),
-    evolvedVehicle: {
-      time: vehicle.time + 1,
-      currentPrice: futurePrice,
-      currentAnnualDividends:
-        vehicle.currentAnnualDividends * (1 + dividendGrowth(economy) / 12),
-    },
+    evolvedVehicle: futureVehicle,
   };
 }
 
