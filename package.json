@@ -1,6 +1,6 @@
 {
   "name": "cashflow",
-  "version": "0.0.1",
+  "version": "0.0.2",
   "description": "Analysis of portfolios based on cashflows and Gordon formula",
   "scripts": {
     "build": "tsc",
