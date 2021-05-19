@@ -6,13 +6,13 @@ import { EconometricInputComponent, EconomicParams } from "../calc/econometric";
 import {
   Position,
   Security,
-  investOneMoreTime,
   noReinvestmentStrategy,
   Outcome,
   Statistics,
   currentYield,
   impliedSentiment,
   fullReinvestmentStrategy,
+  investOverTime,
 } from "../calc/esg";
 import { ChartData, ChartDataSets } from "chart.js";
 
@@ -164,7 +164,13 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     );
   }
 
-  private calculateDatasets() {
+  private calculateDatasets(): {
+    outcomeOverTime: Outcome[];
+    investmentOverTime: Position[];
+    investmentVehicleOverTime: Security[];
+    statisticsOverTime: Statistics[];
+    initialSecurity: Security;
+  } {
     const initialInvestmentPrice = 100;
     const numberOfShares = this.state.startingPV / initialInvestmentPrice;
     const { initialInvestment, initialInvestmentVehicle } = fromParams(
@@ -172,11 +178,6 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       numberOfShares,
       initialInvestmentPrice
     );
-    const params = [this.state.params];
-    const investmentOverTime = [initialInvestment];
-    const investmentVehicleOverTime = [initialInvestmentVehicle];
-    const outcomeOverTime: Outcome[] = [];
-    const statisticsOverTime: Statistics[] = [];
 
     const MAX_TIME = 240;
     const sentiment = impliedSentiment(
@@ -185,26 +186,21 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       this.state.params
     );
 
-    for (let i = 0; i < MAX_TIME; i++) {
-      const { outcome, evolvedVehicle, statistics } = investOneMoreTime(
-        i,
-        _.last(params),
-        _.last(investmentVehicleOverTime),
-        _.last(investmentOverTime),
-        sentiment,
-        // fullReinvestmentStrategy
-        noReinvestmentStrategy
-      );
-      investmentVehicleOverTime.push(evolvedVehicle);
-      investmentOverTime.push(outcome.investment);
-      outcomeOverTime.push(outcome);
-      statisticsOverTime.push(statistics);
-    }
+    const evolution = investOverTime(
+      this.state.params,
+      sentiment,
+      initialInvestmentVehicle,
+      MAX_TIME,
+      initialInvestment,
+      // noReinvestmentStrategy,
+      fullReinvestmentStrategy
+    );
+
     return {
-      investmentOverTime,
-      investmentVehicleOverTime,
-      outcomeOverTime,
-      statisticsOverTime,
+      investmentOverTime: _.map(evolution, (e) => e.outcome.investment),
+      investmentVehicleOverTime: _.map(evolution, (e) => e.evolvedVehicle),
+      outcomeOverTime: _.map(evolution, (e) => e.outcome),
+      statisticsOverTime: _.map(evolution, (e) => e.statistics),
       initialSecurity: initialInvestmentVehicle,
     };
   }

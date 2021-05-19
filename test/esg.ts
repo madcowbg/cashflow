@@ -6,7 +6,7 @@ import {
   evolveVehicle,
   fullReinvestmentStrategy,
   impliedSentiment,
-  investOneMoreTime,
+  investOverTime,
   MarketParams,
   MarketSentiment,
   noReinvestmentStrategy,
@@ -55,11 +55,6 @@ describe("ESG", () => {
       time: 1000,
       investment: { numberOfShares: 3 },
       transactions: [{ dividend: 5 }],
-      statistics: {
-        fv: 600,
-        paidDividends: 5,
-        reinvestedDividends: 0,
-      },
     });
   });
 
@@ -87,36 +82,38 @@ describe("ESG", () => {
 
   it("should have investOneMoreTime produce a particular result", () => {
     const sentiment = impliedSentiment(investmentVehicle, 200, params);
-    const result = investOneMoreTime(
-      1000,
+    const result = investOverTime(
       params,
-      investmentVehicle,
-      investment,
       sentiment,
+      investmentVehicle,
+      2,
+      investment,
       fullReinvestmentStrategy
     );
-    expect(result).to.be.deep.eq({
-      outcome: {
-        time: 1000,
-        investment: { numberOfShares: 3.0249521749979205 },
-        transactions: [
-          {
-            bought: 0.024952174997920656,
-            cost: 5,
-          },
-          { dividend: 5 },
-        ],
+    expect(result).to.be.deep.eq([
+      {
+        outcome: {
+          time: 0,
+          investment: { numberOfShares: 3.0249521749979205 },
+          transactions: [
+            {
+              bought: 0.024952174997920656,
+              cost: 5,
+            },
+            { dividend: 5 },
+          ],
+        },
+        statistics: {
+          fv: 606.1499999999999,
+          paidDividends: 0,
+          reinvestedDividends: 5,
+        },
+        evolvedVehicle: {
+          currentAnnualDividends: 20.03833333333333,
+          realDividendGrowth: 0.003,
+        },
       },
-      statistics: {
-        fv: 606.1499999999999,
-        paidDividends: 0,
-        reinvestedDividends: 5,
-      },
-      evolvedVehicle: {
-        currentAnnualDividends: 20.03833333333333,
-        realDividendGrowth: 0.003,
-      },
-    });
+    ]);
   });
   describe("calculateStatistics", () => {
     it("should have produce zeros on empty inputs", () => {

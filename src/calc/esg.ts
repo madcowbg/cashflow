@@ -69,36 +69,29 @@ export function calculateStatistics(
 
 export function noReinvestmentStrategy(
   time: number,
-  futurePrice: number,
+  reinvestmentPrice: number,
   vehicle: Security,
   investment: Position
 ): Outcome {
   const dividends =
     (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
-  const obj = {
+  return {
     time: time,
     investment: { numberOfShares: investment.numberOfShares },
     transactions: [{ dividend: dividends }],
   };
-  return _.assign(obj, {
-    statistics: calculateStatistics(
-      futurePrice,
-      obj.investment,
-      obj.transactions
-    ),
-  });
 }
 
 export function fullReinvestmentStrategy(
   time: number,
-  futurePrice: number,
+  reinvestmentPrice: number,
   vehicle: Security,
   investment: Position
 ): Outcome {
   const accruedDividends =
     (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
 
-  const boughtShares = accruedDividends / futurePrice;
+  const boughtShares = accruedDividends / reinvestmentPrice;
   const futureShares = investment.numberOfShares + boughtShares;
   return {
     time: time,
@@ -143,32 +136,65 @@ export function impliedSentiment(
   };
 }
 
-export function investOneMoreTime(
-  time: number,
+export interface SecurityAtTime {
+  security: Security;
+  price: number;
+}
+
+function calculateTrajectory(
   economy: MarketParams,
-  vehicle: Security,
-  investment: Position,
   sentiment: MarketSentiment,
+  vehicle: Security,
+  T: number
+): SecurityAtTime[] {
+  const result: SecurityAtTime[] = [];
+  for (let i = 0; i < T; i++) {
+    result.push({
+      security: vehicle,
+      price: priceDDM(vehicle, economy, sentiment),
+    });
+    vehicle = evolveVehicle(economy, vehicle);
+  }
+  return result;
+}
+
+export function investOverTime(
+  economy: MarketParams,
+  sentiment: MarketSentiment,
+  vehicle: Security,
+  T: number,
+  investment: Position,
   strategy: (
     time: number,
     futurePrice: number,
     vehicle: Security,
     investment: Position
   ) => Outcome
-): { outcome: Outcome; statistics: Statistics; evolvedVehicle: Security } {
-  const futureVehicle = evolveVehicle(economy, vehicle);
-  const futurePrice = priceDDM(futureVehicle, economy, sentiment);
+): { outcome: Outcome; statistics: Statistics; evolvedVehicle: Security }[] {
+  const vehicleTrajectory = calculateTrajectory(economy, sentiment, vehicle, T);
+  const result: {
+    outcome: Outcome;
+    statistics: Statistics;
+    evolvedVehicle: Security;
+  }[] = [];
+  for (let t = 0; t < T - 1; t++) {
+    const futurePrice = vehicleTrajectory[t + 1].price;
 
-  const outcome = strategy(time, futurePrice, vehicle, investment);
-  return {
-    outcome: outcome,
-    statistics: calculateStatistics(
-      futurePrice,
-      outcome.investment,
-      outcome.transactions
-    ),
-    evolvedVehicle: futureVehicle,
-  };
+    const outcome = strategy(t, futurePrice, vehicle, investment);
+    investment = outcome.investment;
+    vehicle = vehicleTrajectory[t + 1].security;
+
+    result.push({
+      outcome: outcome,
+      statistics: calculateStatistics(
+        futurePrice,
+        outcome.investment,
+        outcome.transactions
+      ),
+      evolvedVehicle: vehicle,
+    });
+  }
+  return result;
 }
 
 export interface MarketSentiment {
