@@ -14,6 +14,7 @@ import {
   impliedSentiment,
   fullReinvestmentStrategy,
 } from "../calc/esg";
+import { ChartData, ChartDataSets } from "chart.js";
 
 class ESGProps {
   params: EconomicParams;
@@ -80,6 +81,44 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     } = this.calculateDatasets();
 
     const monthsIdx = _.map(outcomeOverTime, (o) => o.time);
+
+    const summaryDatasets: ChartDataSets[] = [
+      {
+        label: "Theoretic Fully Rebalanced Investment Value ($)",
+        data: theoreticInvestmentValue(
+          this.state.startingPV,
+          this.state.params,
+          initialSecurity,
+          100,
+          monthsIdx
+        ),
+        yAxisID: "$",
+      },
+      {
+        label: "Investment Current Market Price ($)",
+        data: _.map(statisticsOverTime, (s) => s.fv),
+        yAxisID: "$",
+      },
+      {
+        label: "Paid Dividends ($)",
+        data: _.map(statisticsOverTime, (s) => s.paidDividends),
+        yAxisID: "$ small",
+      },
+      {
+        label: "Reinvested Dividends ($)",
+        data: _.map(statisticsOverTime, (s) => s.reinvestedDividends),
+        yAxisID: "$ small",
+      },
+      {
+        label: "Realized Dividend Yield (%)",
+        data: _.map(
+          statisticsOverTime,
+          (s) => (((s.reinvestedDividends + s.paidDividends) * 12) / s.fv) * 100
+        ),
+        yAxisID: "%",
+      },
+    ];
+
     return (
       <div>
         <p>
@@ -96,12 +135,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           data={this.state.params}
           onChange={(data) => this.onChange(data)}
         />
-        {this.summaryChart(
-          monthsIdx,
-          outcomeOverTime,
-          statisticsOverTime,
-          initialSecurity
-        )}
+        {this.summaryChart(monthsIdx, summaryDatasets)}
         {this.gainsChart(
           monthsIdx,
           outcomeOverTime,
@@ -109,6 +143,23 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           investmentVehicleOverTime,
           statisticsOverTime
         )}
+
+        <table>
+          <tr>
+            <th>Month</th>
+            {summaryDatasets.map((d) => (
+              <th>{d.label}</th>
+            ))}
+          </tr>
+          {monthsIdx.map((iMonth) => (
+            <tr>
+              <td>{iMonth}</td>
+              {summaryDatasets.map((d) => (
+                <td>{d.data[iMonth]}</td>
+              ))}
+            </tr>
+          ))}
+        </table>
       </div>
     );
   }
@@ -141,8 +192,8 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         _.last(investmentVehicleOverTime),
         _.last(investmentOverTime),
         sentiment,
-        fullReinvestmentStrategy
-        // noReinvestmentStrategy
+        // fullReinvestmentStrategy
+        noReinvestmentStrategy
       );
       investmentVehicleOverTime.push(evolvedVehicle);
       investmentOverTime.push(outcome.investment);
@@ -158,56 +209,14 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     };
   }
 
-  private summaryChart(
-    monthsIdx: number[],
-    outcomes: Outcome[],
-    statistics: Statistics[],
-    security: Security
-  ) {
+  private summaryChart(monthsIdx: number[], summaryDatasets: ChartDataSets[]) {
     return (
       <Line
         width={800}
         height={400}
         data={{
           labels: monthsIdx,
-          datasets: [
-            {
-              label: "Theoretic Fully Rebalanced Investment Value ($)",
-              data: theoreticInvestmentValue(
-                this.state.startingPV,
-                this.state.params,
-                security,
-                100,
-                monthsIdx
-              ),
-              yAxisID: "$",
-            },
-            {
-              label: "Investment Current Market Price ($)",
-              data: _.map(statistics, (s) => s.fv),
-              yAxisID: "$",
-            },
-            {
-              label: "Paid Dividends ($)",
-              data: _.map(statistics, (s) => s.paidDividends),
-              yAxisID: "$ small",
-            },
-            {
-              label: "Reinvested Dividends ($)",
-              data: _.map(statistics, (s) => s.reinvestedDividends),
-              yAxisID: "$ small",
-            },
-            {
-              label: "Realized Dividend Yield (%)",
-              data: _.map(
-                statistics,
-                (s) =>
-                  (((s.reinvestedDividends + s.paidDividends) * 12) / s.fv) *
-                  100
-              ),
-              yAxisID: "%",
-            },
-          ],
+          datasets: summaryDatasets,
         }}
         options={{
           maintainAspectRatio: true,
