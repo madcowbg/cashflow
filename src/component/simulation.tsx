@@ -13,6 +13,7 @@ import {
   impliedSentiment,
   fullReinvestmentStrategy,
   investOverTime,
+  InvestmentOutcome,
 } from "../calc/esg";
 import { ChartData, ChartDataSets } from "chart.js";
 
@@ -78,9 +79,8 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       outcomeOverTime,
       statisticsOverTime,
       initialSecurity,
+      monthsIdx,
     } = this.calculateDatasets();
-
-    const monthsIdx = _.map(outcomeOverTime, (o) => o.time);
 
     const summaryDatasets: ChartDataSets[] = [
       {
@@ -145,14 +145,14 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         )}
 
         <table>
-          <tr>
+          <tr key="title">
             <th>Month</th>
             {summaryDatasets.map((d) => (
               <th>{d.label}</th>
             ))}
           </tr>
           {monthsIdx.map((iMonth) => (
-            <tr>
+            <tr key={iMonth}>
               <td>{iMonth}</td>
               {summaryDatasets.map((d) => (
                 <td>{d.data[iMonth]}</td>
@@ -170,6 +170,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     investmentVehicleOverTime: Security[];
     statisticsOverTime: Statistics[];
     initialSecurity: Security;
+    monthsIdx: number[];
   } {
     const initialInvestmentPrice = 100;
     const numberOfShares = this.state.startingPV / initialInvestmentPrice;
@@ -186,7 +187,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       this.state.params
     );
 
-    const evolution = investOverTime(
+    const investments = investOverTime(
       this.state.params,
       sentiment,
       initialInvestmentVehicle,
@@ -196,12 +197,19 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       fullReinvestmentStrategy
     );
 
+    const evolution: InvestmentOutcome[] = [investments];
+    const monthsIdx: number[] = [0];
+    for (let i = 0; i < MAX_TIME - 1; i++) {
+      evolution.push(_.last(evolution).next());
+      monthsIdx.push(monthsIdx.length);
+    }
     return {
       investmentOverTime: _.map(evolution, (e) => e.outcome.investment),
       investmentVehicleOverTime: _.map(evolution, (e) => e.evolvedVehicle),
       outcomeOverTime: _.map(evolution, (e) => e.outcome),
       statisticsOverTime: _.map(evolution, (e) => e.statistics),
       initialSecurity: initialInvestmentVehicle,
+      monthsIdx: monthsIdx,
     };
   }
 
