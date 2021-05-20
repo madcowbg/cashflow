@@ -1,4 +1,5 @@
 import * as _ from "lodash";
+import { random_discrete_bridge } from "./brownian_bridge";
 
 export interface MarketParams {
   inflation: number; // %
@@ -145,18 +146,18 @@ export interface SecurityAtTime {
 
 function evaluateSecurity(
   economy: MarketParams,
-  sentiment: MarketSentiment,
+  sentiment: MarketSentimentEvolition,
   vehicle: Security,
   T: number
 ): SecurityAtTime {
   return {
     time: T,
     security: vehicle,
-    price: priceDDM(vehicle, economy, sentiment),
+    price: priceDDM(vehicle, economy, sentiment.current),
     next: () =>
       evaluateSecurity(
         economy,
-        sentiment,
+        sentiment.next(),
         evolveVehicle(economy, vehicle),
         T + 1
       ),
@@ -171,9 +172,22 @@ export interface InvestmentOutcome {
   next: () => InvestmentOutcome;
 }
 
+export interface MarketSentimentEvolition {
+  current: MarketSentiment;
+  next: () => MarketSentimentEvolition;
+}
+
+export function unchangingSentiment(sentiment: MarketSentiment) {
+  const unchangingSentiment: MarketSentimentEvolition = {
+    current: sentiment,
+    next: () => unchangingSentiment,
+  };
+  return unchangingSentiment;
+}
+
 export function investOverTime(
   economy: MarketParams,
-  sentiment: MarketSentiment,
+  sentiment: MarketSentimentEvolition,
   vehicle: Security,
   time: number,
   investment: Position,
@@ -200,7 +214,7 @@ export function investOverTime(
     next: () =>
       investOverTime(
         economy,
-        sentiment,
+        sentiment.next(),
         securityAtTplus1.security,
         time + 1,
         outcome.investment,
@@ -235,4 +249,29 @@ export function priceDDM(
     sentiment.discountRate,
     dividendGrowth(security, economy)
   );
+}
+
+export function revertingSentiment(
+  sentiment: MarketSentiment,
+  MAX_TIME: number
+): MarketSentimentEvolition {
+  const sentiment_logchange = random_discrete_bridge(
+    MAX_TIME,
+    0,
+    0,
+    0.1 / 12,
+    1251253
+  );
+  const sentiments = _.map(sentiment_logchange, (v) => ({
+    discountRate: sentiment.discountRate * Math.exp(v),
+  }));
+
+  function atTime(t: number): MarketSentimentEvolition {
+    return {
+      current: sentiments[Math.min(t, sentiments.length - 1)],
+      next: () => atTime(t + 1),
+    };
+  }
+
+  return atTime(0);
 }

@@ -4,18 +4,18 @@ import { Line } from "react-chartjs-2";
 
 import { EconometricInputComponent, EconomicParams } from "../calc/econometric";
 import {
-  Position,
-  Security,
-  noReinvestmentStrategy,
-  Outcome,
-  Statistics,
   currentYield,
-  impliedSentiment,
   fullReinvestmentStrategy,
-  investOverTime,
+  impliedSentiment,
   InvestmentOutcome,
+  investOverTime,
+  Outcome,
+  Position,
+  revertingSentiment,
+  Security,
+  Statistics,
 } from "../calc/esg";
-import { ChartData, ChartDataSets } from "chart.js";
+import { ChartDataSets } from "chart.js";
 
 class ESGProps {
   params: EconomicParams;
@@ -189,7 +189,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
 
     const investments = investOverTime(
       this.state.params,
-      sentiment,
+      revertingSentiment(sentiment, MAX_TIME),
       initialInvestmentVehicle,
       MAX_TIME,
       initialInvestment,

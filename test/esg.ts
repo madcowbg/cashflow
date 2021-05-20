@@ -13,6 +13,7 @@ import {
   Position,
   priceDDM,
   Security,
+  unchangingSentiment,
 } from "../src/calc/esg";
 import _ = require("lodash");
 
@@ -84,7 +85,7 @@ describe("ESG", () => {
     const sentiment = impliedSentiment(investmentVehicle, 200, params);
     const result = investOverTime(
       params,
-      sentiment,
+      unchangingSentiment(sentiment),
       investmentVehicle,
       0,
       investment,
