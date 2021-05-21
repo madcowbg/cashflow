@@ -64,11 +64,11 @@ export class EconometricInputComponent extends React.Component<
           />
           <input
             type="checkbox"
-            onChange={(e) =>
+            onChange={(e) => {
               this.handleChange({
-                adjustForInflation: e.target.value == "true",
-              })
-            }
+                adjustForInflation: e.target.checked,
+              });
+            }}
             value={String(this.state.adjustForInflation)}
           />
           Show inflation-adjusted ($)

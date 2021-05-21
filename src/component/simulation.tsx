@@ -18,6 +18,7 @@ import {
   Statistics,
 } from "../calc/esg";
 import { ChartDataSets } from "chart.js";
+import { time } from "@amcharts/amcharts4/core";
 
 class ESGProps {
   params: EconomicParams;
@@ -63,6 +64,20 @@ function fromParams(
   };
 }
 
+function adjustForInflation(
+  params: EconomicParams
+): (vals: number[]) => number[] {
+  return (vals: number[]): number[] =>
+    _.map(
+      vals,
+      (val: number, i: number): number =>
+        val /
+        (params.adjustForInflation
+          ? Math.pow(1 + params.inflation / 12, i)
+          : 1.0)
+    );
+}
+
 export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   constructor(props: ESGProps) {
     super(props);
@@ -88,28 +103,36 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     const summaryDatasets: ChartDataSets[] = [
       {
         label: "Theoretic Fully Rebalanced Investment Value ($)",
-        data: theoreticInvestmentValue(
-          this.state.startingPV,
-          this.state.params,
-          initialSecurity,
-          100,
-          monthsIdx
+        data: adjustForInflation(this.state.params)(
+          theoreticInvestmentValue(
+            this.state.startingPV,
+            this.state.params,
+            initialSecurity,
+            100,
+            monthsIdx
+          )
         ),
         yAxisID: "$",
       },
       {
         label: "Investment Current Market Price ($)",
-        data: _.map(statisticsOverTime, (s) => s.fv),
+        data: adjustForInflation(this.state.params)(
+          _.map(statisticsOverTime, (s) => s.fv)
+        ),
         yAxisID: "$",
       },
       {
         label: "Paid Dividends ($)",
-        data: _.map(statisticsOverTime, (s) => s.paidDividends),
+        data: adjustForInflation(this.state.params)(
+          _.map(statisticsOverTime, (s) => s.paidDividends)
+        ),
         yAxisID: "$ small",
       },
       {
         label: "Reinvested Dividends ($)",
-        data: _.map(statisticsOverTime, (s) => s.reinvestedDividends),
+        data: adjustForInflation(this.state.params)(
+          _.map(statisticsOverTime, (s) => s.reinvestedDividends)
+        ),
         yAxisID: "$ small",
       },
       {
@@ -255,11 +278,23 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
                 id: "$",
                 type: "linear",
                 position: "left",
+                scaleLabel: {
+                  labelString: this.state.params.adjustForInflation
+                    ? "adjusted $"
+                    : "nominal $",
+                  display: true,
+                },
               },
               {
                 id: "$ small",
                 type: "linear",
                 position: "left",
+                scaleLabel: {
+                  labelString: this.state.params.adjustForInflation
+                    ? "adjusted $"
+                    : "nominal $",
+                  display: true,
+                },
               },
               {
                 id: "%",
@@ -292,20 +327,24 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           datasets: [
             {
               label: "Dividends ($)",
-              data: _.map(
-                monthsIdx,
-                (i) =>
-                  statisticsOverTime[i].reinvestedDividends +
-                  statisticsOverTime[i].paidDividends
+              data: adjustForInflation(this.state.params)(
+                _.map(
+                  monthsIdx,
+                  (i) =>
+                    statisticsOverTime[i].reinvestedDividends +
+                    statisticsOverTime[i].paidDividends
+                )
               ),
             },
             {
               label: "Capital Gains ($)",
-              data: _.map(
-                monthsIdx,
-                (i) =>
-                  statisticsOverTime[i].fv -
-                  statisticsOverTime[Math.max(0, i - 1)].fv
+              data: adjustForInflation(this.state.params)(
+                _.map(
+                  monthsIdx,
+                  (i) =>
+                    statisticsOverTime[i].fv -
+                    statisticsOverTime[Math.max(0, i - 1)].fv
+                )
               ),
             },
           ],
