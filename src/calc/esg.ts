@@ -1,5 +1,6 @@
 import * as _ from "lodash";
 import { random_discrete_bridge } from "./brownian_bridge";
+import { random_mean_reverting } from "./mean_reversion";
 
 export interface MarketParams {
   inflation: number; // %
@@ -242,18 +243,15 @@ export function revertingSentiment(
   economy: MarketParams,
   security: Security,
   sentiment: MarketSentiment,
-  MAX_TIME: number
+  MAX_TIME: number // todo should not be needed
 ): Recursive<MarketSentiment> {
   const minDiscountRate = dividendGrowth(security, economy);
   const optionalDR = sentiment.discountRate - minDiscountRate;
-  const sentiment_logchange = random_discrete_bridge(
-    MAX_TIME,
-    0,
-    0,
-    3 / 12,
-    1251253
+  const sentiment_optional = asArray(
+    random_mean_reverting(0, 0, 0.1, 0.8 / 12, 1251253),
+    MAX_TIME
   );
-  const sentiments = _.map(sentiment_logchange, (v) => ({
+  const sentiments = _.map(sentiment_optional, (v) => ({
     discountRate: minDiscountRate + optionalDR * Math.exp(v),
   }));
 
@@ -282,4 +280,13 @@ export function priceDDM(
 export interface Recursive<E> {
   current: E;
   next(): Recursive<E>;
+}
+
+export function asArray<T>(evolution: Recursive<T>, takeCnt: number): T[] {
+  const result: T[] = [];
+  for (let i = 0; i < takeCnt; i++) {
+    result.push(evolution.current);
+    evolution = evolution.next();
+  }
+  return result;
 }

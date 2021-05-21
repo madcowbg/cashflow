@@ -4,6 +4,7 @@ import { Line } from "react-chartjs-2";
 
 import { EconometricInputComponent, EconomicParams } from "../calc/econometric";
 import {
+  asArray,
   currentYield,
   fullReinvestmentStrategy,
   impliedSentiment,
@@ -12,7 +13,6 @@ import {
   MarketSentiment,
   Outcome,
   Position,
-  Recursive,
   revertingSentiment,
   Security,
   Statistics,
@@ -61,15 +61,6 @@ function fromParams(
       realDividendGrowth: params.realDividendGrowth,
     },
   };
-}
-
-function asArray<T>(evolution: Recursive<T>, takeCnt: number): T[] {
-  const result: T[] = [];
-  for (let i = 0; i < takeCnt; i++) {
-    result.push(evolution.current);
-    evolution = evolution.next();
-  }
-  return result;
 }
 
 export class ESGSimulation extends React.Component<ESGProps, ESGState> {
