@@ -9,8 +9,10 @@ import {
   impliedSentiment,
   InvestmentOutcome,
   investOverTime,
+  MarketSentiment,
   Outcome,
   Position,
+  Recursive,
   revertingSentiment,
   Security,
   Statistics,
@@ -61,6 +63,15 @@ function fromParams(
   };
 }
 
+function asArray<T>(evolution: Recursive<T>, takeCnt: number): T[] {
+  const result: T[] = [];
+  for (let i = 0; i < takeCnt; i++) {
+    result.push(evolution.current);
+    evolution = evolution.next();
+  }
+  return result;
+}
+
 export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   constructor(props: ESGProps) {
     super(props);
@@ -80,6 +91,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       statisticsOverTime,
       initialSecurity,
       monthsIdx,
+      sentimentOverTime,
     } = this.calculateDatasets();
 
     const summaryDatasets: ChartDataSets[] = [
@@ -119,6 +131,22 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       },
     ];
 
+    const sentimentDatasets = [
+      {
+        label: "Realized Dividend Yield (%)",
+        data: _.map(
+          statisticsOverTime,
+          (s) => (((s.reinvestedDividends + s.paidDividends) * 12) / s.fv) * 100
+        ),
+        yAxisID: "%",
+      },
+      {
+        label: "Discount Rate (%)",
+        data: _.map(sentimentOverTime, (s) => s.discountRate * 100),
+        yAxisID: "%",
+      },
+    ];
+
     return (
       <div>
         <p>
@@ -135,6 +163,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           data={this.state.params}
           onChange={(data) => this.onChange(data)}
         />
+        {this.summaryChart(monthsIdx, sentimentDatasets)}
         {this.summaryChart(monthsIdx, summaryDatasets)}
         {this.gainsChart(
           monthsIdx,
@@ -171,6 +200,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     statisticsOverTime: Statistics[];
     initialSecurity: Security;
     monthsIdx: number[];
+    sentimentOverTime: MarketSentiment[];
   } {
     const initialInvestmentPrice = 100;
     const numberOfShares = this.state.startingPV / initialInvestmentPrice;
@@ -181,15 +211,21 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     );
 
     const MAX_TIME = 240;
-    const sentiment = impliedSentiment(
+    const initialSentiment = impliedSentiment(
       initialInvestmentVehicle,
       100,
       this.state.params
     );
 
+    const sentiment = revertingSentiment(
+      this.state.params,
+      initialInvestmentVehicle,
+      initialSentiment,
+      MAX_TIME
+    );
     const investments = investOverTime(
       this.state.params,
-      revertingSentiment(sentiment, MAX_TIME),
+      sentiment,
       initialInvestmentVehicle,
       MAX_TIME,
       initialInvestment,
@@ -197,12 +233,8 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       fullReinvestmentStrategy
     );
 
-    const evolution: InvestmentOutcome[] = [investments];
-    const monthsIdx: number[] = [0];
-    for (let i = 0; i < MAX_TIME - 1; i++) {
-      evolution.push(_.last(evolution).next());
-      monthsIdx.push(monthsIdx.length);
-    }
+    const evolution: InvestmentOutcome[] = asArray(investments, MAX_TIME - 1);
+    const monthsIdx: number[] = _.range(0, MAX_TIME - 1);
     return {
       investmentOverTime: _.map(evolution, (e) => e.outcome.investment),
       investmentVehicleOverTime: _.map(evolution, (e) => e.evolvedVehicle),
@@ -210,6 +242,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       statisticsOverTime: _.map(evolution, (e) => e.statistics),
       initialSecurity: initialInvestmentVehicle,
       monthsIdx: monthsIdx,
+      sentimentOverTime: asArray(sentiment, MAX_TIME),
     };
   }
 

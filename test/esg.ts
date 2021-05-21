@@ -92,28 +92,30 @@ describe("ESG", () => {
       fullReinvestmentStrategy
     );
     expect(_.assign({}, result, { next: "ignored" })).to.be.deep.eq({
-      time: 0,
-      next: "ignored",
-      outcome: {
+      current: {
         time: 0,
-        investment: { numberOfShares: 3.0249521749979205 },
-        transactions: [
-          {
-            bought: 0.024952174997920656,
-            cost: 5,
-          },
-          { dividend: 5 },
-        ],
+        outcome: {
+          time: 0,
+          investment: { numberOfShares: 3.0249521749979205 },
+          transactions: [
+            {
+              bought: 0.024952174997920656,
+              cost: 5,
+            },
+            { dividend: 5 },
+          ],
+        },
+        statistics: {
+          fv: 606.1499999999999,
+          paidDividends: 0,
+          reinvestedDividends: 5,
+        },
+        evolvedVehicle: {
+          currentAnnualDividends: 20.03833333333333,
+          realDividendGrowth: 0.003,
+        },
       },
-      statistics: {
-        fv: 606.1499999999999,
-        paidDividends: 0,
-        reinvestedDividends: 5,
-      },
-      evolvedVehicle: {
-        currentAnnualDividends: 20.03833333333333,
-        realDividendGrowth: 0.003,
-      },
+      next: "ignored",
     });
   });
   describe("calculateStatistics", () => {

@@ -141,19 +141,20 @@ export interface SecurityAtTime {
   time: number;
   security: Security;
   price: number;
-  next: () => SecurityAtTime;
 }
 
 function evaluateSecurity(
   economy: MarketParams,
-  sentiment: MarketSentimentEvolition,
+  sentiment: Recursive<MarketSentiment>,
   vehicle: Security,
   T: number
-): SecurityAtTime {
+): Recursive<SecurityAtTime> {
   return {
-    time: T,
-    security: vehicle,
-    price: priceDDM(vehicle, economy, sentiment.current),
+    current: {
+      time: T,
+      security: vehicle,
+      price: priceDDM(vehicle, economy, sentiment.current),
+    },
     next: () =>
       evaluateSecurity(
         economy,
@@ -169,16 +170,12 @@ export interface InvestmentOutcome {
   outcome: Outcome;
   statistics: Statistics;
   evolvedVehicle: Security;
-  next: () => InvestmentOutcome;
 }
 
-export interface MarketSentimentEvolition {
-  current: MarketSentiment;
-  next: () => MarketSentimentEvolition;
-}
-
-export function unchangingSentiment(sentiment: MarketSentiment) {
-  const unchangingSentiment: MarketSentimentEvolition = {
+export function unchangingSentiment(
+  sentiment: MarketSentiment
+): Recursive<MarketSentiment> {
+  const unchangingSentiment: Recursive<MarketSentiment> = {
     current: sentiment,
     next: () => unchangingSentiment,
   };
@@ -187,7 +184,7 @@ export function unchangingSentiment(sentiment: MarketSentiment) {
 
 export function investOverTime(
   economy: MarketParams,
-  sentiment: MarketSentimentEvolition,
+  sentiment: Recursive<MarketSentiment>,
   vehicle: Security,
   time: number,
   investment: Position,
@@ -197,20 +194,22 @@ export function investOverTime(
     vehicle: Security,
     investment: Position
   ) => Outcome
-): InvestmentOutcome {
+): Recursive<InvestmentOutcome> {
   const securityNow = evaluateSecurity(economy, sentiment, vehicle, time);
 
-  const securityAtTplus1 = securityNow.next();
+  const securityAtTplus1 = securityNow.next().current;
   const outcome = strategy(time, securityAtTplus1.price, vehicle, investment);
   return {
-    time: time,
-    outcome: outcome,
-    statistics: calculateStatistics(
-      securityAtTplus1.price,
-      outcome.investment,
-      outcome.transactions
-    ),
-    evolvedVehicle: securityAtTplus1.security,
+    current: {
+      time: time,
+      outcome: outcome,
+      statistics: calculateStatistics(
+        securityAtTplus1.price,
+        outcome.investment,
+        outcome.transactions
+      ),
+      evolvedVehicle: securityAtTplus1.security,
+    },
     next: () =>
       investOverTime(
         economy,
@@ -239,6 +238,35 @@ export function evolveVehicle(
   };
 }
 
+export function revertingSentiment(
+  economy: MarketParams,
+  security: Security,
+  sentiment: MarketSentiment,
+  MAX_TIME: number
+): Recursive<MarketSentiment> {
+  const minDiscountRate = dividendGrowth(security, economy);
+  const optionalDR = sentiment.discountRate - minDiscountRate;
+  const sentiment_logchange = random_discrete_bridge(
+    MAX_TIME,
+    0,
+    0,
+    3 / 12,
+    1251253
+  );
+  const sentiments = _.map(sentiment_logchange, (v) => ({
+    discountRate: minDiscountRate + optionalDR * Math.exp(v),
+  }));
+
+  function atTime(t: number): Recursive<MarketSentiment> {
+    return {
+      current: sentiments[Math.min(t, sentiments.length - 1)],
+      next: () => atTime(t + 1),
+    };
+  }
+
+  return atTime(0);
+}
+
 export function priceDDM(
   security: Security,
   economy: MarketParams,
@@ -251,27 +279,7 @@ export function priceDDM(
   );
 }
 
-export function revertingSentiment(
-  sentiment: MarketSentiment,
-  MAX_TIME: number
-): MarketSentimentEvolition {
-  const sentiment_logchange = random_discrete_bridge(
-    MAX_TIME,
-    0,
-    0,
-    0.1 / 12,
-    1251253
-  );
-  const sentiments = _.map(sentiment_logchange, (v) => ({
-    discountRate: sentiment.discountRate * Math.exp(v),
-  }));
-
-  function atTime(t: number): MarketSentimentEvolition {
-    return {
-      current: sentiments[Math.min(t, sentiments.length - 1)],
-      next: () => atTime(t + 1),
-    };
-  }
-
-  return atTime(0);
+export interface Recursive<E> {
+  current: E;
+  next(): Recursive<E>;
 }
