@@ -69,7 +69,7 @@ export class EconometricInputComponent extends React.Component<
                 adjustForInflation: e.target.checked,
               });
             }}
-            value={String(this.state.adjustForInflation)}
+            checked={this.state.adjustForInflation}
           />
           Show inflation-adjusted ($)
         </p>
