@@ -47,9 +47,9 @@ function aggregated(transactions: Transaction[]): {
   const { totalDividends, totalBought, totalSold } = _.reduce(
     transactions,
     (a: { totalDividends: 0; totalBought: 0; totalSold: 0 }, b: any) => ({
-      totalDividends: a.totalDividends + (b.dividend || 0),
-      totalBought: a.totalBought + ((b.bought && b.cost) || 0),
-      totalSold: a.totalSold + ((b.sold && b.proceeds) || 0),
+      totalDividends: a.totalDividends + (b.dividend ?? 0),
+      totalBought: a.totalBought + ((b.bought && b.cost) ?? 0),
+      totalSold: a.totalSold + ((b.sold && b.proceeds) ?? 0),
     }),
     { totalDividends: 0, totalBought: 0, totalSold: 0 }
   );
