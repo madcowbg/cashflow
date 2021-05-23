@@ -1,5 +1,4 @@
 import * as _ from "lodash";
-import { random_discrete_bridge } from "./brownian_bridge";
 import { random_mean_reverting } from "./mean_reversion";
 
 export interface MarketParams {
@@ -17,8 +16,10 @@ export interface Position {
 
 export interface Statistics {
   fv: number;
-  paidDividends: number;
-  reinvestedDividends: number;
+  totalDividends: number;
+  totalBoughtDollar: number;
+  totalSoldDollar: number;
+  externalCashflow: number;
 }
 
 type Transaction =
@@ -26,10 +27,14 @@ type Transaction =
   | { sold: number; proceeds: number }
   | { dividend: number };
 
-export interface Outcome {
+export interface InvestmentDecision {
   time: number;
-  investment: Position;
   transactions: Transaction[];
+}
+
+export interface Outcome {
+  investment: Position;
+  decision: InvestmentDecision;
 }
 
 export function dividendGrowth(
@@ -39,33 +44,47 @@ export function dividendGrowth(
   return security.realDividendGrowth + economy.inflation;
 }
 
-function aggregated(transactions: Transaction[]): {
+type AggregateTransaction = {
   totalDividends: number;
-  totalBought: number;
-  totalSold: number;
-} {
-  const { totalDividends, totalBought, totalSold } = _.reduce(
+  totalBoughtDollar: number;
+  totalBoughtNumShares: number;
+  totalSoldDollar: number;
+  totalSoldNumShares: number;
+};
+
+function aggregated(transactions: Transaction[]): AggregateTransaction {
+  return _.reduce(
     transactions,
-    (a: { totalDividends: 0; totalBought: 0; totalSold: 0 }, b: any) => ({
+    (a: AggregateTransaction, b: any) => ({
       totalDividends: a.totalDividends + (b.dividend ?? 0),
-      totalBought: a.totalBought + ((b.bought && b.cost) ?? 0),
-      totalSold: a.totalSold + ((b.sold && b.proceeds) ?? 0),
+      totalBoughtDollar: a.totalBoughtDollar + ((b.bought && b.cost) ?? 0),
+      totalBoughtNumShares: a.totalBoughtNumShares + (b.bought ?? 0),
+      totalSoldDollar: a.totalSoldDollar + ((b.sold && b.proceeds) ?? 0),
+      totalSoldNumShares: a.totalSoldNumShares + (b.sold ?? 0),
     }),
-    { totalDividends: 0, totalBought: 0, totalSold: 0 }
+    {
+      totalDividends: 0,
+      totalBoughtDollar: 0,
+      totalBoughtNumShares: 0,
+      totalSoldDollar: 0,
+      totalSoldNumShares: 0,
+    }
   );
-  return { totalDividends, totalBought, totalSold };
 }
 
 export function calculateStatistics(
   futurePrice: number,
   investment: Position,
-  transactions: Transaction[]
+  transactions: Transaction[],
+  savings: SavingsParams
 ): Statistics {
-  const { totalDividends, totalBought, totalSold } = aggregated(transactions);
+  const agg = aggregated(transactions);
   return {
     fv: investment.numberOfShares * futurePrice,
-    paidDividends: totalDividends - totalBought + totalSold,
-    reinvestedDividends: totalBought - totalSold,
+    totalDividends: agg.totalDividends,
+    totalBoughtDollar: agg.totalBoughtDollar,
+    totalSoldDollar: agg.totalSoldDollar,
+    externalCashflow: savings.monthlyInvestment,
   };
 }
 
@@ -74,12 +93,11 @@ export function noReinvestmentStrategy(
   reinvestmentPrice: number,
   vehicle: Security,
   investment: Position
-): Outcome {
+): InvestmentDecision {
   const dividends =
     (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
   return {
     time: time,
-    investment: { numberOfShares: investment.numberOfShares },
     transactions: [{ dividend: dividends }],
   };
 }
@@ -89,17 +107,15 @@ export function fullReinvestmentStrategy(
   reinvestmentPrice: number,
   vehicle: Security,
   investment: Position
-): Outcome {
+): InvestmentDecision {
   const accruedDividends =
     (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
 
-  const boughtShares = accruedDividends / reinvestmentPrice;
-  const futureShares = investment.numberOfShares + boughtShares;
+  const reinvestmentBoughtShares = accruedDividends / reinvestmentPrice;
   return {
     time: time,
-    investment: { numberOfShares: futureShares },
     transactions: [
-      { bought: boughtShares, cost: accruedDividends },
+      { bought: reinvestmentBoughtShares, cost: accruedDividends },
       { dividend: accruedDividends },
     ],
   };
@@ -183,31 +199,93 @@ export function unchangingSentiment(
   return unchangingSentiment;
 }
 
+export function consolidateInvestment(
+  investment: Position,
+  decision: InvestmentDecision
+): Position {
+  const agg = aggregated(decision.transactions);
+  return {
+    numberOfShares:
+      investment.numberOfShares +
+      agg.totalBoughtNumShares -
+      agg.totalSoldNumShares,
+  };
+}
+
+export interface SavingsParams {
+  monthlyInvestment: number;
+}
+
+export function investCashflow(
+  strategy: (
+    time: number,
+    futurePrice: number,
+    vehicle: Security,
+    investment: Position
+  ) => InvestmentDecision
+): (
+  time: number,
+  futurePrice: number,
+  vehicle: Security,
+  investment: Position,
+  savings: SavingsParams
+) => InvestmentDecision {
+  return (
+    time: number,
+    futurePrice: number,
+    vehicle: Security,
+    investment: Position,
+    savings: SavingsParams
+  ) => {
+    const strategyDecision = strategy(time, futurePrice, vehicle, investment);
+    return {
+      time: strategyDecision.time,
+      transactions: strategyDecision.transactions.concat({
+        bought: savings.monthlyInvestment / futurePrice,
+        cost: savings.monthlyInvestment,
+      }),
+    };
+  };
+}
+
 export function investOverTime(
   economy: MarketParams,
   sentiment: Recursive<MarketSentiment>,
   vehicle: Security,
   time: number,
   investment: Position,
+  savings: Recursive<SavingsParams>,
   strategy: (
     time: number,
     futurePrice: number,
     vehicle: Security,
-    investment: Position
-  ) => Outcome
+    investment: Position,
+    savings: SavingsParams
+  ) => InvestmentDecision
 ): Recursive<InvestmentOutcome> {
   const securityNow = evaluateSecurity(economy, sentiment, vehicle, time);
 
   const securityAtTplus1 = securityNow.next().current;
-  const outcome = strategy(time, securityAtTplus1.price, vehicle, investment);
+  const decision = strategy(
+    time,
+    securityAtTplus1.price,
+    vehicle,
+    investment,
+    savings.current
+  );
+  const futureInvestment = consolidateInvestment(investment, decision);
   return {
     current: {
       time: time,
-      outcome: outcome,
+      outcome: {
+        investment: futureInvestment,
+        decision: decision,
+      },
       statistics: calculateStatistics(
         securityAtTplus1.price,
-        outcome.investment,
-        outcome.transactions
+        futureInvestment,
+        decision.transactions,
+        savings.current
       ),
       evolvedVehicle: securityAtTplus1.security,
     },
@@ -217,7 +295,8 @@ export function investOverTime(
         sentiment.next(),
         securityAtTplus1.security,
         time + 1,
-        outcome.investment,
+        futureInvestment,
+        savings.next(),
         strategy
       ),
   };
@@ -289,4 +368,22 @@ export function asArray<T>(evolution: Recursive<T>, takeCnt: number): T[] {
     evolution = evolution.next();
   }
   return result;
+}
+
+export function inflationAdjustedSavings(
+  params: MarketParams,
+  savings: SavingsParams
+): Recursive<SavingsParams> {
+  function atTime(tMonth: number): Recursive<SavingsParams> {
+    return {
+      current: {
+        monthlyInvestment:
+          savings.monthlyInvestment *
+          Math.pow(1 + params.inflation / 12, tMonth),
+      },
+      next: () => atTime(tMonth + 1),
+    };
+  }
+
+  return atTime(0);
 }

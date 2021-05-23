@@ -8,25 +8,30 @@ import {
   currentYield,
   fullReinvestmentStrategy,
   impliedSentiment,
+  inflationAdjustedSavings,
+  investCashflow,
   InvestmentOutcome,
   investOverTime,
   MarketSentiment,
   Outcome,
   Position,
   revertingSentiment,
+  SavingsParams,
   Security,
   Statistics,
 } from "../calc/esg";
 import { ChartDataSets } from "chart.js";
-import { time } from "@amcharts/amcharts4/core";
+import { SavingsParametersInput } from "./savings_input";
 
 class ESGProps {
   params: EconomicParams;
+  savings: SavingsParams;
 }
 
 class ESGState {
   params: EconomicParams;
   startingPV: number;
+  savings: SavingsParams;
 }
 
 function theoreticInvestmentValue(
@@ -81,12 +86,24 @@ function adjustForInflation(
 export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   constructor(props: ESGProps) {
     super(props);
-    this.state = { params: props.params, startingPV: 250000 };
+    this.state = {
+      params: props.params,
+      startingPV: 250000,
+      savings: props.savings,
+    };
   }
 
-  onChange(params: EconomicParams) {
+  private onParamsChange(params: EconomicParams) {
     console.log(`changed params: ${JSON.stringify(params)}`);
     this.setState({ params: params });
+  }
+
+  private onChangeStartingPV(startingPV: number): void {
+    this.setState({ startingPV: startingPV });
+  }
+
+  private onSavingsChange(data: SavingsParams): void {
+    this.setState({ savings: data });
   }
 
   render() {
@@ -98,7 +115,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       initialSecurity,
       monthsIdx,
       sentimentOverTime,
-    } = this.calculateDatasets();
+    } = this.calculateInvestmentDatasets();
 
     const summaryDatasets: ChartDataSets[] = [
       {
@@ -122,24 +139,38 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         yAxisID: "$",
       },
       {
-        label: "Paid Dividends ($)",
+        label: "Dividends ($)",
         data: adjustForInflation(this.state.params)(
-          _.map(statisticsOverTime, (s) => s.paidDividends)
+          _.map(statisticsOverTime, (s) => s.totalDividends)
         ),
         yAxisID: "$ small",
       },
       {
-        label: "Reinvested Dividends ($)",
+        label: "Total Bought ($)",
         data: adjustForInflation(this.state.params)(
-          _.map(statisticsOverTime, (s) => s.reinvestedDividends)
+          _.map(statisticsOverTime, (s) => s.totalBoughtDollar)
         ),
         yAxisID: "$ small",
+      },
+      {
+        label: "Total Sold ($)",
+        data: adjustForInflation(this.state.params)(
+          _.map(statisticsOverTime, (s) => s.totalSoldDollar)
+        ),
+        yAxisID: "$ small",
+      },
+      {
+        label: "Cashflow ($)",
+        data: adjustForInflation(this.state.params)(
+          _.map(statisticsOverTime, (s) => s.externalCashflow)
+        ),
+        yAxisID: "$",
       },
       {
         label: "Realized Dividend Yield (%)",
         data: _.map(
           statisticsOverTime,
-          (s) => (((s.reinvestedDividends + s.paidDividends) * 12) / s.fv) * 100
+          (s) => ((s.totalDividends * 12) / s.fv) * 100
         ),
         yAxisID: "%",
       },
@@ -150,7 +181,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         label: "Realized Dividend Yield (%)",
         data: _.map(
           statisticsOverTime,
-          (s) => (((s.reinvestedDividends + s.paidDividends) * 12) / s.fv) * 100
+          (s) => ((s.totalDividends * 12) / s.fv) * 100
         ),
         yAxisID: "%",
       },
@@ -158,6 +189,13 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         label: "Discount Rate (%)",
         data: _.map(sentimentOverTime, (s) => s.discountRate * 100),
         yAxisID: "%",
+      },
+      {
+        label: "Cashflow ($)",
+        data: adjustForInflation(this.state.params)(
+          _.map(statisticsOverTime, (s) => s.externalCashflow)
+        ),
+        yAxisID: "$",
       },
     ];
 
@@ -175,7 +213,11 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         </p>
         <EconometricInputComponent
           data={this.state.params}
-          onChange={(data) => this.onChange(data)}
+          onChange={(data) => this.onParamsChange(data)}
+        />
+        <SavingsParametersInput
+          data={this.state.savings}
+          onChange={(data: SavingsParams) => this.onSavingsChange(data)}
         />
         {this.summaryChart(monthsIdx, sentimentDatasets)}
         {this.summaryChart(monthsIdx, summaryDatasets)}
@@ -207,7 +249,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     );
   }
 
-  private calculateDatasets(): {
+  private calculateInvestmentDatasets(): {
     outcomeOverTime: Outcome[];
     investmentOverTime: Position[];
     investmentVehicleOverTime: Security[];
@@ -237,14 +279,21 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       initialSentiment,
       MAX_TIME
     );
+
+    const savings = inflationAdjustedSavings(
+      this.state.params,
+      this.state.savings
+    );
+
     const investments = investOverTime(
       this.state.params,
       sentiment,
       initialInvestmentVehicle,
       MAX_TIME,
       initialInvestment,
+      savings,
       // noReinvestmentStrategy,
-      fullReinvestmentStrategy
+      investCashflow(fullReinvestmentStrategy)
     );
 
     const evolution: InvestmentOutcome[] = asArray(investments, MAX_TIME - 1);
@@ -328,13 +377,9 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
             {
               label: "Dividends ($)",
               data: adjustForInflation(this.state.params)(
-                _.map(
-                  monthsIdx,
-                  (i) =>
-                    statisticsOverTime[i].reinvestedDividends +
-                    statisticsOverTime[i].paidDividends
-                )
+                _.map(monthsIdx, (i) => statisticsOverTime[i].totalDividends)
               ),
+              yAxisID: "$ small",
             },
             {
               label: "Capital Gains ($)",
@@ -346,6 +391,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
                     statisticsOverTime[Math.max(0, i - 1)].fv
                 )
               ),
+              yAxisID: "$",
             },
           ],
         }}
@@ -355,16 +401,39 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           scales: {
             yAxes: [
               {
-                stacked: true,
+                id: "$",
+                type: "linear",
+                position: "left",
+                scaleLabel: {
+                  labelString: this.state.params.adjustForInflation
+                    ? "adjusted $"
+                    : "nominal $",
+                  display: true,
+                },
+              },
+              {
+                id: "$ small",
+                type: "linear",
+                position: "left",
+                scaleLabel: {
+                  labelString: this.state.params.adjustForInflation
+                    ? "adjusted $"
+                    : "nominal $",
+                  display: true,
+                },
+              },
+              {
+                id: "%",
+                type: "linear",
+                position: "right",
+                ticks: {
+                  min: 0,
+                },
               },
             ],
           },
         }}
       />
     );
-  }
-
-  private onChangeStartingPV(startingPV: number): void {
-    this.setState({ startingPV: startingPV });
   }
 }

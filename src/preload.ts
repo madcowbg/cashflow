@@ -111,6 +111,9 @@ window.addEventListener("DOMContentLoaded", () => {
         discountRate: 0.085,
         adjustForInflation: true,
       },
+      savings: {
+        monthlyInvestment: 5000,
+      },
     }),
     document.getElementById("portfolio-simulation")
   );
