@@ -83,6 +83,11 @@ function adjustForInflation(
     );
 }
 
+function formatFloat(precision: number): (vals: number[]) => number[] {
+  const size = Math.pow(10, precision);
+  return (vals) => _.map(vals, (val) => Math.round(val * size) / size);
+}
+
 export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   constructor(props: ESGProps) {
     super(props);
@@ -92,6 +97,8 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       savings: props.savings,
     };
   }
+  readonly formatDollar = formatFloat(1);
+  readonly formatPercent = formatFloat(3);
 
   private onParamsChange(params: EconomicParams) {
     console.log(`changed params: ${JSON.stringify(params)}`);
@@ -120,57 +127,71 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     const summaryDatasets: ChartDataSets[] = [
       {
         label: "Theoretic Fully Rebalanced Investment Value ($)",
-        data: adjustForInflation(this.state.params)(
-          theoreticInvestmentValue(
-            this.state.startingPV,
-            this.state.params,
-            initialSecurity,
-            100,
-            monthsIdx
+        data: this.formatDollar(
+          adjustForInflation(this.state.params)(
+            theoreticInvestmentValue(
+              this.state.startingPV,
+              this.state.params,
+              initialSecurity,
+              100,
+              monthsIdx
+            )
           )
         ),
         yAxisID: "$",
       },
       {
         label: "Investment Current Market Price ($)",
-        data: adjustForInflation(this.state.params)(
-          _.map(statisticsOverTime, (s) => s.fv)
+        data: this.formatDollar(
+          adjustForInflation(this.state.params)(
+            _.map(statisticsOverTime, (s) => s.fv)
+          )
         ),
         yAxisID: "$",
       },
       {
         label: "Dividends ($)",
-        data: adjustForInflation(this.state.params)(
-          _.map(statisticsOverTime, (s) => s.totalDividends)
+        data: this.formatDollar(
+          adjustForInflation(this.state.params)(
+            _.map(statisticsOverTime, (s) => s.totalDividends)
+          )
         ),
         yAxisID: "$ small",
       },
       {
         label: "Total Bought ($)",
-        data: adjustForInflation(this.state.params)(
-          _.map(statisticsOverTime, (s) => s.totalBoughtDollar)
+        data: this.formatDollar(
+          adjustForInflation(this.state.params)(
+            _.map(statisticsOverTime, (s) => s.totalBoughtDollar)
+          )
         ),
         yAxisID: "$ small",
       },
       {
         label: "Total Sold ($)",
-        data: adjustForInflation(this.state.params)(
-          _.map(statisticsOverTime, (s) => s.totalSoldDollar)
+        data: this.formatDollar(
+          adjustForInflation(this.state.params)(
+            _.map(statisticsOverTime, (s) => s.totalSoldDollar)
+          )
         ),
         yAxisID: "$ small",
       },
       {
         label: "Cashflow ($)",
-        data: adjustForInflation(this.state.params)(
-          _.map(statisticsOverTime, (s) => s.externalCashflow)
+        data: this.formatDollar(
+          adjustForInflation(this.state.params)(
+            _.map(statisticsOverTime, (s) => s.externalCashflow)
+          )
         ),
         yAxisID: "$",
       },
       {
         label: "Realized Dividend Yield (%)",
-        data: _.map(
-          statisticsOverTime,
-          (s) => ((s.totalDividends * 12) / s.fv) * 100
+        data: this.formatPercent(
+          _.map(
+            statisticsOverTime,
+            (s) => ((s.totalDividends * 12) / s.fv) * 100
+          )
         ),
         yAxisID: "%",
       },
@@ -179,21 +200,27 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     const sentimentDatasets = [
       {
         label: "Realized Dividend Yield (%)",
-        data: _.map(
-          statisticsOverTime,
-          (s) => ((s.totalDividends * 12) / s.fv) * 100
+        data: this.formatPercent(
+          _.map(
+            statisticsOverTime,
+            (s) => ((s.totalDividends * 12) / s.fv) * 100
+          )
         ),
         yAxisID: "%",
       },
       {
         label: "Discount Rate (%)",
-        data: _.map(sentimentOverTime, (s) => s.discountRate * 100),
+        data: this.formatPercent(
+          _.map(sentimentOverTime, (s) => s.discountRate * 100)
+        ),
         yAxisID: "%",
       },
       {
         label: "Cashflow ($)",
-        data: adjustForInflation(this.state.params)(
-          _.map(statisticsOverTime, (s) => s.externalCashflow)
+        data: this.formatPercent(
+          adjustForInflation(this.state.params)(
+            _.map(statisticsOverTime, (s) => s.externalCashflow)
+          )
         ),
         yAxisID: "$",
       },
@@ -380,19 +407,23 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           datasets: [
             {
               label: "Dividends ($)",
-              data: adjustForInflation(this.state.params)(
-                _.map(monthsIdx, (i) => statisticsOverTime[i].totalDividends)
+              data: this.formatDollar(
+                adjustForInflation(this.state.params)(
+                  _.map(monthsIdx, (i) => statisticsOverTime[i].totalDividends)
+                )
               ),
               yAxisID: "$ small",
             },
             {
               label: "Capital Gains ($)",
-              data: adjustForInflation(this.state.params)(
-                _.map(
-                  monthsIdx,
-                  (i) =>
-                    statisticsOverTime[i].fv -
-                    statisticsOverTime[Math.max(0, i - 1)].fv
+              data: this.formatDollar(
+                adjustForInflation(this.state.params)(
+                  _.map(
+                    monthsIdx,
+                    (i) =>
+                      statisticsOverTime[i].fv -
+                      statisticsOverTime[Math.max(0, i - 1)].fv
+                  )
                 )
               ),
               yAxisID: "$",
