@@ -230,20 +230,24 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         )}
 
         <table>
-          <tr key="title">
-            <th>Month</th>
-            {summaryDatasets.map((d) => (
-              <th>{d.label}</th>
-            ))}
-          </tr>
-          {monthsIdx.map((iMonth) => (
-            <tr key={iMonth}>
-              <td>{iMonth}</td>
-              {summaryDatasets.map((d) => (
-                <td>{d.data[iMonth]}</td>
+          <thead>
+            <tr key="title">
+              <th key="month">Month</th>
+              {summaryDatasets.map((d, idx) => (
+                <th key={idx}>{d.label}</th>
               ))}
             </tr>
-          ))}
+          </thead>
+          <tbody>
+            {monthsIdx.map((iMonth) => (
+              <tr key={iMonth}>
+                <td key="month">{iMonth}</td>
+                {summaryDatasets.map((d, idx) => (
+                  <td key={idx}>{d.data[iMonth]}</td>
+                ))}
+              </tr>
+            ))}
+          </tbody>
         </table>
       </div>
     );
