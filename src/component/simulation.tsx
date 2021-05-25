@@ -307,8 +307,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     const sentiment = revertingSentiment(
       this.state.params,
       initialInvestmentVehicle,
-      initialSentiment,
-      MAX_TIME
+      initialSentiment
     );
 
     const savings = inflationAdjustedSavings(
@@ -317,13 +316,12 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     );
 
     const investments = investOverTime(
+      0,
       this.state.params,
       sentiment,
       initialInvestmentVehicle,
-      MAX_TIME,
       initialInvestment,
       savings,
-      // noReinvestmentStrategy,
       investCashflow(fullReinvestmentStrategy)
     );
 

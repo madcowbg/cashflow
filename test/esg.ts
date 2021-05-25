@@ -2,6 +2,7 @@ import { expect } from "chai";
 import {
   calculateStatistics,
   consolidateInvestment,
+  constant,
   currentYield,
   dividendGrowth,
   evolveVehicle,
@@ -17,7 +18,6 @@ import {
   priceDDM,
   SavingsParams,
   Security,
-  unchangingSentiment,
 } from "../src/calc/esg";
 import _ = require("lodash");
 
@@ -97,10 +97,10 @@ describe("ESG", () => {
   it("should have investOneMoreTime produce a particular result", () => {
     const sentiment = impliedSentiment(investmentVehicle, 200, params);
     const result = investOverTime(
-      params,
-      unchangingSentiment(sentiment),
-      investmentVehicle,
       0,
+      params,
+      constant(sentiment),
+      investmentVehicle,
       investment,
       inflationAdjustedSavings(params, savingsParams),
       investCashflow(fullReinvestmentStrategy)
