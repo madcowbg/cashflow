@@ -1,6 +1,6 @@
 import { random_mean_reverting } from "../src/calc/mean_reversion";
 import { expect } from "chai";
-import { asArray } from "../src/calc/esg";
+import { asArray } from "../src/calc/processes";
 
 describe("mean_reversion", () => {
   it("should have specific value", () => {

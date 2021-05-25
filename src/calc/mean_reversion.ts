@@ -2,7 +2,7 @@
 // http://www.investmentscience.com/Content/howtoArticles/MLE_for_OR_mean_reverting.pdf
 
 import * as d3 from "d3-random";
-import { Recursive } from "./esg";
+import { Recursive } from "./processes";
 
 export function random_mean_reverting(
   x_0: number,

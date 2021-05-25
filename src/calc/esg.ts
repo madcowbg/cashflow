@@ -1,5 +1,6 @@
 import * as _ from "lodash";
 import { random_mean_reverting } from "./mean_reversion";
+import { evolvingState, map, map2, Recursive } from "./processes";
 
 export interface MarketParams {
   inflation: number; // %
@@ -160,7 +161,7 @@ export interface SecurityAtTime {
   price: number;
 }
 
-function evaluateSecurity(
+export function evaluateSecurity(
   economy: MarketParams,
   sentiment: Recursive<MarketSentiment>,
   vehicle: Security,
@@ -185,6 +186,7 @@ function evaluateSecurity(
       security: v,
       price: priceDDM(v, economy, s),
     }),
+    (t) => t + 1,
     T,
     evolvingVehicle,
     sentiment
@@ -249,9 +251,7 @@ export function investCashflow(
 
 export function investOverTime(
   time: number,
-  economy: MarketParams,
-  sentiment: Recursive<MarketSentiment>,
-  vehicle: Security,
+  securityNow: Recursive<SecurityAtTime>,
   investment: Position,
   savings: Recursive<SavingsParams>,
   strategy: (
@@ -262,14 +262,13 @@ export function investOverTime(
     savings: SavingsParams
   ) => InvestmentDecision
 ): Recursive<InvestmentOutcome> {
-  const securityNow = evaluateSecurity(economy, sentiment, vehicle, time);
   const futureSecurity = securityNow.next();
 
   const securityAtTplus1 = futureSecurity.current;
   const decision = strategy(
     time,
     securityAtTplus1.price,
-    vehicle,
+    securityNow.current.security,
     investment,
     savings.current
   );
@@ -292,9 +291,7 @@ export function investOverTime(
     next: () =>
       investOverTime(
         time + 1,
-        economy,
-        sentiment.next(),
-        securityAtTplus1.security,
+        futureSecurity,
         futureInvestment,
         savings.next(),
         strategy
@@ -353,93 +350,6 @@ export function priceDDM(
     sentiment.discountRate,
     dividendGrowth(security, economy)
   );
-}
-
-export interface Recursive<E> {
-  current: E;
-  next(): Recursive<E>;
-}
-
-export function asArray<T>(evolution: Recursive<T>, takeCnt: number): T[] {
-  const result: T[] = [];
-  for (let i = 0; i < takeCnt; i++) {
-    result.push(evolution.current);
-    evolution = evolution.next();
-  }
-  return result;
-}
-
-function evolvingState<S, T, A>(
-  fun: (currentState: S, ...currentArgs: A[]) => T,
-  evolvingState: (s: S) => S,
-  initialState: S,
-  ...initialArgs: Recursive<A>[]
-): Recursive<T> {
-  // TODO is it possible to do static check with varargs?
-  if (fun.length - 1 != initialArgs.length) {
-    throw new Error(
-      `function has ${fun.length - 1} arguments but got passed only ${
-        initialArgs.length
-      } params!`
-    );
-  }
-
-  function sizesAssumedCorrect(state: S, ...args: Recursive<A>[]) {
-    return {
-      current: fun(state, ..._.map(args, (ar) => ar.current)),
-      next: () =>
-        sizesAssumedCorrect(
-          evolvingState(state),
-          ..._.map(args, (ar) => ar.next())
-        ),
-    };
-  }
-
-  return sizesAssumedCorrect(initialState, ...initialArgs);
-}
-
-function map2<T, A, B>(
-  fun: (currentState: number, a: A, b: B) => T,
-  initialTime: number,
-  a: Recursive<A>,
-  b: Recursive<B>
-) {
-  return evolvingState<number, T, { a: A; b: B }>(
-    (t, val) => fun(t, val.a, val.b),
-    (t) => t + 1,
-    initialTime,
-    join(a, b)
-  );
-}
-
-function join<A, B>(
-  a: Recursive<A>,
-  b: Recursive<B>
-): Recursive<{ a: A; b: B }> {
-  return {
-    current: { a: a.current, b: b.current },
-    next: () => join(a.next(), b.next()),
-  };
-}
-
-function map<T, A>(
-  fun: (currentState: number, ...currentArgs: A[]) => T,
-  initialTime: number,
-  ...initialArgs: Recursive<A>[]
-) {
-  return evolvingState<number, T, A>(
-    fun,
-    (t) => t + 1,
-    initialTime,
-    ...initialArgs
-  );
-}
-
-export function constant<T>(val: T): Recursive<T> {
-  return {
-    current: val,
-    next: () => constant(val),
-  };
 }
 
 export function inflationAdjustedSavings(

@@ -2,9 +2,9 @@ import { expect } from "chai";
 import {
   calculateStatistics,
   consolidateInvestment,
-  constant,
   currentYield,
   dividendGrowth,
+  evaluateSecurity,
   evolveVehicle,
   fullReinvestmentStrategy,
   impliedSentiment,
@@ -20,6 +20,7 @@ import {
   Security,
 } from "../src/calc/esg";
 import _ = require("lodash");
+import { constant } from "../src/calc/processes";
 
 describe("ESG", () => {
   const params: MarketParams = {
@@ -96,11 +97,15 @@ describe("ESG", () => {
 
   it("should have investOneMoreTime produce a particular result", () => {
     const sentiment = impliedSentiment(investmentVehicle, 200, params);
-    const result = investOverTime(
-      0,
+    const securityAtTime = evaluateSecurity(
       params,
       constant(sentiment),
       investmentVehicle,
+      0
+    );
+    const result = investOverTime(
+      0,
+      securityAtTime,
       investment,
       inflationAdjustedSavings(params, savingsParams),
       investCashflow(fullReinvestmentStrategy)
