@@ -9,7 +9,6 @@ import {
   fullReinvestmentStrategy,
   impliedSentiment,
   inflationAdjustedSavings,
-  investCashflow,
   InvestmentOutcome,
   investOverTime,
   MarketSentiment,
@@ -184,7 +183,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
             _.map(statisticsOverTime, (s) => s.externalCashflow)
           )
         ),
-        yAxisID: "$",
+        yAxisID: "$ small",
       },
       {
         label: "Realized Dividend Yield (%)",
@@ -327,7 +326,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       securityAtTimes,
       initialInvestment,
       savings,
-      investCashflow(fullReinvestmentStrategy)
+      fullReinvestmentStrategy
     );
 
     const evolution: InvestmentOutcome[] = asArray(investments, MAX_TIME - 1);

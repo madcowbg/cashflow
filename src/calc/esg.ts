@@ -1,6 +1,13 @@
 import * as _ from "lodash";
 import { random_mean_reverting } from "./mean_reversion";
-import { evolvingState, map, map2, Recursive } from "./processes";
+import {
+  constant,
+  evolvingState,
+  map,
+  map2,
+  map3,
+  Recursive,
+} from "./processes";
 
 export interface MarketParams {
   inflation: number; // %
@@ -172,21 +179,25 @@ export function evaluateSecurity(
     Security,
     undefined
   >(
-    (state) => state.v,
-    (state: { t: number; v: Security }) => ({
-      t: state.t + 1,
-      v: evolveVehicle(economy, state.v),
-    }),
+    (state) => [
+      state.v,
+      {
+        t: state.t + 1,
+        v: evolveVehicle(economy, state.v),
+      },
+    ],
     { t: 0, v: vehicle }
   );
 
   return map2(
-    (currentTime, v: Security, s: MarketSentiment) => ({
-      time: currentTime,
-      security: v,
-      price: priceDDM(v, economy, s),
-    }),
-    (t) => t + 1,
+    (currentTime, v: Security, s: MarketSentiment) => [
+      {
+        time: currentTime,
+        security: v,
+        price: priceDDM(v, economy, s),
+      },
+      currentTime + 1,
+    ],
     T,
     evolvingVehicle,
     sentiment
@@ -217,43 +228,71 @@ export interface SavingsParams {
   monthlyInvestment: number;
 }
 
-export function investCashflow(
-  strategy: (
-    time: number,
-    futurePrice: number,
-    vehicle: Security,
-    investment: Position
-  ) => InvestmentDecision
-): (
+function investCashflow(
+  strategyDecision: InvestmentDecision,
+  savings: SavingsParams,
+  securityAtTplus1: SecurityAtTime
+) {
+  const decision = {
+    time: strategyDecision.time,
+    transactions: strategyDecision.transactions.concat({
+      bought: savings.monthlyInvestment / securityAtTplus1.price,
+      cost: savings.monthlyInvestment,
+    }),
+  };
+  return decision;
+}
+
+function computeInvestmentsAtTime(
   time: number,
-  futurePrice: number,
-  vehicle: Security,
-  investment: Position,
-  savings: SavingsParams
-) => InvestmentDecision {
-  return (
+  securityAtTplus1: SecurityAtTime,
+  currentSecurity: SecurityAtTime,
+  currentPosition: Position,
+  currentSavings: SavingsParams,
+  strategy: (
     time: number,
     futurePrice: number,
     vehicle: Security,
     investment: Position,
     savings: SavingsParams
-  ) => {
-    const strategyDecision = strategy(time, futurePrice, vehicle, investment);
-    return {
-      time: strategyDecision.time,
-      transactions: strategyDecision.transactions.concat({
-        bought: savings.monthlyInvestment / futurePrice,
-        cost: savings.monthlyInvestment,
-      }),
-    };
+  ) => InvestmentDecision
+): { futurePosition: Position; investmentOutcome: InvestmentOutcome } {
+  const strategyDecision = strategy(
+    time,
+    securityAtTplus1.price,
+    currentSecurity.security,
+    currentPosition,
+    currentSavings
+  );
+
+  const decision = investCashflow(
+    strategyDecision,
+    currentSavings,
+    securityAtTplus1
+  );
+  const futurePosition = consolidateInvestment(currentPosition, decision);
+  const investmentOutcome: InvestmentOutcome = {
+    time: time,
+    outcome: {
+      investment: futurePosition,
+      decision: decision,
+    },
+    statistics: calculateStatistics(
+      securityAtTplus1.price,
+      futurePosition,
+      decision.transactions,
+      currentSavings
+    ),
+    evolvedVehicle: securityAtTplus1.security,
   };
+  return { futurePosition, investmentOutcome };
 }
 
 export function investOverTime(
   time: number,
-  securityNow: Recursive<SecurityAtTime>,
-  investment: Position,
-  savings: Recursive<SavingsParams>,
+  securityProcess: Recursive<SecurityAtTime>,
+  initialInvestment: Position,
+  savingsProcess: Recursive<SavingsParams>,
   strategy: (
     time: number,
     futurePrice: number,
@@ -262,41 +301,34 @@ export function investOverTime(
     savings: SavingsParams
   ) => InvestmentDecision
 ): Recursive<InvestmentOutcome> {
-  const futureSecurity = securityNow.next();
+  const futureSecurityProcess = securityProcess.next();
 
-  const securityAtTplus1 = futureSecurity.current;
-  const decision = strategy(
-    time,
-    securityAtTplus1.price,
-    securityNow.current.security,
-    investment,
-    savings.current
-  );
-  const futureInvestment = consolidateInvestment(investment, decision);
-  return {
-    current: {
-      time: time,
-      outcome: {
-        investment: futureInvestment,
-        decision: decision,
-      },
-      statistics: calculateStatistics(
-        securityAtTplus1.price,
-        futureInvestment,
-        decision.transactions,
-        savings.current
-      ),
-      evolvedVehicle: securityAtTplus1.security,
-    },
-    next: () =>
-      investOverTime(
-        time + 1,
-        futureSecurity,
-        futureInvestment,
-        savings.next(),
+  return map3<
+    { t: number; currentPosition: Position },
+    InvestmentOutcome,
+    SecurityAtTime,
+    SavingsParams,
+    SecurityAtTime
+  >(
+    (state, currentSecurity, currentSavings, securityAtTplus1) => {
+      const { futurePosition, investmentOutcome } = computeInvestmentsAtTime(
+        time,
+        securityAtTplus1,
+        currentSecurity,
+        state.currentPosition,
+        currentSavings,
         strategy
-      ),
-  };
+      );
+      return [
+        investmentOutcome,
+        { t: state.t + 1, currentPosition: futurePosition },
+      ];
+    },
+    { t: time, currentPosition: initialInvestment },
+    securityProcess,
+    savingsProcess,
+    futureSecurityProcess
+  );
 }
 
 export interface MarketSentiment {
@@ -357,10 +389,11 @@ export function inflationAdjustedSavings(
   savings: SavingsParams
 ): Recursive<SavingsParams> {
   return map(
-    (tMonth) => ({
+    (tMonth, val) => ({
       monthlyInvestment:
         savings.monthlyInvestment * Math.pow(1 + params.inflation / 12, tMonth),
     }),
-    0
+    0,
+    constant(undefined)
   );
 }

@@ -9,7 +9,6 @@ import {
   fullReinvestmentStrategy,
   impliedSentiment,
   inflationAdjustedSavings,
-  investCashflow,
   investOverTime,
   MarketParams,
   MarketSentiment,
@@ -108,7 +107,7 @@ describe("ESG", () => {
       securityAtTime,
       investment,
       inflationAdjustedSavings(params, savingsParams),
-      investCashflow(fullReinvestmentStrategy)
+      fullReinvestmentStrategy
     );
     expect(_.assign({}, result, { next: "ignored" })).to.be.deep.eq({
       current: {
