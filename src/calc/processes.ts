@@ -99,7 +99,7 @@ export function stateful<T, S>(
   return statefulWithF;
 }
 
-export function takeEager<V>(p: Process<V>, num: number): V[] {
+export function take<V>(num: number, p: Process<V>): V[] {
   const res: V[] = [];
   for (let i = 0; i < num; i++) {
     res.push(p.v);
@@ -108,11 +108,31 @@ export function takeEager<V>(p: Process<V>, num: number): V[] {
   return res;
 }
 
-export function asArray<T>(evolution: Process<T>, takeCnt: number): T[] {
-  const result: T[] = [];
-  for (let i = 0; i < takeCnt; i++) {
-    result.push(evolution.v);
-    evolution = evolution.evolve();
+export function sample<A>(frequency: number): (pa: Process<A>) => Process<A> {
+  return aggregate(frequency, (...args: A[]) => args[args.length - 1]);
+}
+
+export function aggregate<A>(
+  frequency: number,
+  agg: (...args: A[]) => A
+): (pa: Process<A>) => Process<A> {
+  if (frequency <= 0) {
+    throw new Error(`need positive frequency to sample, got ${frequency}`);
   }
-  return result;
+  function skip(pa: Process<A>): [Process<A>, A[]] {
+    const args = [];
+    for (let i = 0; i < frequency; i++) {
+      args.push(pa.v);
+      pa = pa.evolve();
+    }
+    return [pa, args];
+  }
+  const sampler = (pa: Process<A>) => {
+    const [evolvedPA, elementsInbetween] = skip(pa);
+    return {
+      v: agg(...elementsInbetween),
+      evolve: () => sampler(evolvedPA),
+    };
+  };
+  return sampler;
 }
