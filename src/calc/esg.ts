@@ -1,13 +1,6 @@
 import * as _ from "lodash";
 import { random_mean_reverting } from "./mean_reversion";
-import {
-  constant,
-  evolvingState,
-  map,
-  map2,
-  map3,
-  Recursive,
-} from "./processes";
+import { count, fmap, Process, stateful } from "./processes";
 
 export interface MarketParams {
   inflation: number; // %
@@ -170,38 +163,25 @@ export interface SecurityAtTime {
 
 export function evaluateSecurity(
   economy: MarketParams,
-  sentiment: Recursive<MarketSentiment>,
+  sentiment: Process<MarketSentiment>,
   vehicle: Security,
   T: number
-): Recursive<SecurityAtTime> {
-  const evolvingVehicle = evolvingState<
-    { t: number; v: Security },
-    Security,
-    undefined
-  >(
-    (state) => [
-      state.v,
-      {
-        t: state.t + 1,
-        v: evolveVehicle(economy, state.v),
-      },
-    ],
-    { t: 0, v: vehicle }
-  );
+): Process<SecurityAtTime> {
+  type State = { t: number; v: Security };
+  const evolvingVehicle = stateful(
+    (state: State): State => ({
+      t: state.t + 1,
+      v: evolveVehicle(economy, state.v),
+    })
+  )({ t: T, v: vehicle });
 
-  return map2(
-    (currentTime, v: Security, s: MarketSentiment) => [
-      {
-        time: currentTime,
-        security: v,
-        price: priceDDM(v, economy, s),
-      },
-      currentTime + 1,
-    ],
-    T,
-    evolvingVehicle,
-    sentiment
-  );
+  return fmap(
+    (state: State, s: MarketSentiment): SecurityAtTime => ({
+      time: state.t,
+      security: state.v,
+      price: priceDDM(state.v, economy, s),
+    })
+  )(evolvingVehicle, sentiment);
 }
 
 export interface InvestmentOutcome {
@@ -290,9 +270,9 @@ function computeInvestmentsAtTime(
 
 export function investOverTime(
   time: number,
-  securityProcess: Recursive<SecurityAtTime>,
+  securityProcess: Process<SecurityAtTime>,
   initialInvestment: Position,
-  savingsProcess: Recursive<SavingsParams>,
+  savingsProcess: Process<SavingsParams>,
   strategy: (
     time: number,
     futurePrice: number,
@@ -300,17 +280,21 @@ export function investOverTime(
     investment: Position,
     savings: SavingsParams
   ) => InvestmentDecision
-): Recursive<InvestmentOutcome> {
-  const futureSecurityProcess = securityProcess.next();
+): Process<InvestmentOutcome> {
+  const futureSecurityProcess = securityProcess.evolve();
+  type State = {
+    t: number;
+    currentPosition: Position;
+    outcome?: InvestmentOutcome;
+  };
 
-  return map3<
-    { t: number; currentPosition: Position },
-    InvestmentOutcome,
-    SecurityAtTime,
-    SavingsParams,
-    SecurityAtTime
-  >(
-    (state, currentSecurity, currentSavings, securityAtTplus1) => {
+  const stateP = stateful(
+    (
+      state: State,
+      currentSecurity: SecurityAtTime,
+      currentSavings: SavingsParams,
+      securityAtTplus1: SecurityAtTime
+    ): State => {
       const { futurePosition, investmentOutcome } = computeInvestmentsAtTime(
         time,
         securityAtTplus1,
@@ -319,16 +303,19 @@ export function investOverTime(
         currentSavings,
         strategy
       );
-      return [
-        investmentOutcome,
-        { t: state.t + 1, currentPosition: futurePosition },
-      ];
-    },
-    { t: time, currentPosition: initialInvestment },
+      return {
+        t: state.t + 1,
+        currentPosition: futurePosition,
+        outcome: investmentOutcome,
+      };
+    }
+  )(
+    { t: time, currentPosition: initialInvestment, outcome: undefined },
     securityProcess,
     savingsProcess,
     futureSecurityProcess
   );
+  return fmap((s: State) => s.outcome)(stateP.evolve());
 }
 
 export interface MarketSentiment {
@@ -351,7 +338,7 @@ export function revertingSentiment(
   economy: MarketParams,
   security: Security,
   sentiment: MarketSentiment
-): Recursive<MarketSentiment> {
+): Process<MarketSentiment> {
   const minDiscountRate = dividendGrowth(security, economy);
   const optionalDR = sentiment.discountRate - minDiscountRate;
   const sentiment_optional_logchange = random_mean_reverting(
@@ -362,14 +349,10 @@ export function revertingSentiment(
     1251253
   );
 
-  return map(
-    (time, sentiment_diff_loglevel_value: number) => ({
-      discountRate:
-        minDiscountRate + optionalDR * Math.exp(sentiment_diff_loglevel_value),
-    }),
-    0,
-    sentiment_optional_logchange
-  );
+  return fmap((sentiment_diff_loglevel_value: number) => ({
+    discountRate:
+      minDiscountRate + optionalDR * Math.exp(sentiment_diff_loglevel_value),
+  }))(sentiment_optional_logchange);
 }
 
 export function priceDDM(
@@ -387,13 +370,9 @@ export function priceDDM(
 export function inflationAdjustedSavings(
   params: MarketParams,
   savings: SavingsParams
-): Recursive<SavingsParams> {
-  return map(
-    (tMonth, val) => ({
-      monthlyInvestment:
-        savings.monthlyInvestment * Math.pow(1 + params.inflation / 12, tMonth),
-    }),
-    0,
-    constant(undefined)
-  );
+): Process<SavingsParams> {
+  return fmap((tMonth: number) => ({
+    monthlyInvestment:
+      savings.monthlyInvestment * Math.pow(1 + params.inflation / 12, tMonth),
+  }))(count(0));
 }

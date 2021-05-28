@@ -2,7 +2,7 @@
 // http://www.investmentscience.com/Content/howtoArticles/MLE_for_OR_mean_reverting.pdf
 
 import * as d3 from "d3-random";
-import { Recursive } from "./processes";
+import { Process } from "./processes";
 
 export function random_mean_reverting(
   x_0: number,
@@ -10,7 +10,7 @@ export function random_mean_reverting(
   nu: number,
   std: number,
   seed?: number
-): Recursive<number> {
+): Process<number> {
   if (seed === undefined) {
     seed = d3.randomInt(1000000)();
   }
@@ -20,8 +20,8 @@ export function random_mean_reverting(
     const currentNumber =
       prevNumber + nu * (ltm - prevNumber) + std * normalRNG();
     return {
-      current: currentNumber,
-      next: () => genNext(currentNumber),
+      v: currentNumber,
+      evolve: () => genNext(currentNumber),
     };
   };
   return genNext(x_0);

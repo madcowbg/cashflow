@@ -109,8 +109,8 @@ describe("ESG", () => {
       inflationAdjustedSavings(params, savingsParams),
       fullReinvestmentStrategy
     );
-    expect(_.assign({}, result, { next: "ignored" })).to.be.deep.eq({
-      current: {
+    expect(_.assign({}, result, { evolve: "ignored" })).to.be.deep.eq({
+      v: {
         time: 0,
         outcome: {
           decision: {
@@ -141,7 +141,7 @@ describe("ESG", () => {
           realDividendGrowth: 0.003,
         },
       },
-      next: "ignored",
+      evolve: "ignored",
     });
   });
   describe("calculateStatistics", () => {
