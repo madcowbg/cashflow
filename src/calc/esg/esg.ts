@@ -274,7 +274,7 @@ function computeInvestmentsAtTime(
 }
 
 export function investOverTime(
-  time: number,
+  startTime: number,
   securityProcess: Process<SecurityAtTime>,
   initialInvestment: Position,
   savingsProcess: Process<SavingsParams>,
@@ -301,7 +301,7 @@ export function investOverTime(
       securityAtTplus1: SecurityAtTime
     ): State => {
       const { futurePosition, investmentOutcome } = computeInvestmentsAtTime(
-        time,
+        state.t,
         securityAtTplus1,
         currentSecurity,
         state.currentPosition,
@@ -315,7 +315,7 @@ export function investOverTime(
       };
     }
   )(
-    { t: time, currentPosition: initialInvestment, outcome: undefined },
+    { t: startTime, currentPosition: initialInvestment, outcome: undefined },
     securityProcess,
     savingsProcess,
     futureSecurityProcess

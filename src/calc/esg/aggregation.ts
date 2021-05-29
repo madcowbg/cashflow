@@ -33,7 +33,7 @@ function aggregateS(statistics: Statistics[]): Statistics {
   };
 }
 
-function aggregateIO(...args: InvestmentOutcome[]): InvestmentOutcome {
+export function aggregateIO(...args: InvestmentOutcome[]): InvestmentOutcome {
   return {
     time: _.last(_.map(args, (io) => io.time)),
     outcome: aggregateO(args.map((io) => io.outcome)),
@@ -45,12 +45,10 @@ function aggregateIO(...args: InvestmentOutcome[]): InvestmentOutcome {
 export function investmentProcess(
   displayFreq: number,
   investments: Process<InvestmentOutcome>,
-  sentiment: Process<MarketSentiment>,
-  marketParams: MarketParams
+  sentiment: Process<MarketSentiment>
 ): {
   sentimentOverTime: Process<MarketSentiment>;
   evolution: Process<InvestmentOutcome>;
-  cpi: Process<number>;
   monthsIdx: Process<number>;
 } {
   const monthsIdx = sample<number>(displayFreq)(count(0));
@@ -60,10 +58,6 @@ export function investmentProcess(
     aggregateIO
   )(investments);
   const sentimentOverTime = sample<MarketSentiment>(displayFreq)(sentiment);
-  const monthlyCPI = fmap((i: number) =>
-    Math.pow(1 + marketParams.inflation / 12, i)
-  )(count(0));
 
-  const cpi = sample<number>(displayFreq)(monthlyCPI);
-  return { monthsIdx, evolution, sentimentOverTime, cpi };
+  return { monthsIdx, evolution, sentimentOverTime };
 }

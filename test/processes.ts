@@ -9,6 +9,7 @@ import {
 } from "../src/calc/processes";
 import { expect } from "chai";
 import _ = require("lodash");
+import { random_mean_reverting } from "../src/calc/mean_reversion";
 
 describe("unit", () => {
   it("should always produce the same value", () => {
@@ -25,7 +26,7 @@ describe("fmap", () => {
     const counter = count(0);
 
     const lifted = fmap<number, number>((a) => a + 3);
-    expect(take(5, lifted(counter))).to.deep.eq([3, 4, 5, 6, 7]);
+    expect(take(5)(lifted(counter))).to.deep.eq([3, 4, 5, 6, 7]);
   });
 
   it("should combine values", () => {
@@ -33,7 +34,7 @@ describe("fmap", () => {
     const counter5 = count(5);
     const func = fmap<number, number, number>((a, b) => 2 * a - b);
 
-    expect(take(5, func(counter, counter5))).to.deep.eq([-5, -4, -3, -2, -1]);
+    expect(take(5)(func(counter, counter5))).to.deep.eq([-5, -4, -3, -2, -1]);
   });
 });
 
@@ -47,7 +48,7 @@ describe("sample", () => {
     expect(sample(3)(count(0)).v).to.eq(2);
   });
   it("should sample every several turns", () => {
-    expect(take(5, sample(3)(count(2)))).to.deep.eq([4, 7, 10, 13, 16]);
+    expect(take(5)(sample(3)(count(2)))).to.deep.eq([4, 7, 10, 13, 16]);
   });
 });
 
@@ -68,7 +69,7 @@ describe("aggregate", () => {
       ncalls++;
       return _.sum(args);
     };
-    const taken = take(4, aggregate(5, aggregator)(count(0)));
+    const taken = take(4)(aggregate(5, aggregator)(count(0)));
     expect(taken).to.deep.eq([10, 35, 60, 85]);
     expect(ncalls).to.eq(5);
   });
@@ -78,16 +79,16 @@ describe("aggregate", () => {
       expect(args.length).to.eq(7);
       return -1;
     };
-    expect(_.sum(take(5, aggregate(7, aggregator)(count(0))))).to.eq(-5);
+    expect(_.sum(take(5)(aggregate(7, aggregator)(count(0))))).to.eq(-5);
   });
 
   it("should call aggregator with all elements in batches", () => {
     const nels = 11;
     const freq = 7;
     const aggregatedSum = _.sum(
-      take(nels, aggregate(freq, (...e: number[]) => _.sum(e))(count(1)))
+      take(nels)(aggregate(freq, (...e: number[]) => _.sum(e))(count(1)))
     );
-    const simpleSum = _.sum(take(nels * freq, count(1)));
+    const simpleSum = _.sum(take(nels * freq)(count(1)));
     expect(aggregatedSum).to.eq(
       simpleSum,
       "aggregate sum is not equal to simple sum!"
@@ -98,9 +99,9 @@ describe("aggregate", () => {
 
 describe("take", () => {
   it("should return empty array when take count is not positive", function () {
-    expect(take(0, count(0)).length).to.eq(0);
+    expect(take(0)(count(0)).length).to.eq(0);
   });
   it("should take the first count of elements", function () {
-    expect(take(4, count(0)).length).to.eq(4);
+    expect(take(4)(count(0)).length).to.eq(4);
   });
 });

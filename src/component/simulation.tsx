@@ -6,18 +6,26 @@ import { EconometricInputComponent, EconomicParams } from "../calc/econometric";
 import {
   currentYield,
   InvestmentOutcome,
-  savingsTrajectory,
+  MarketParams,
   MarketSentiment,
   Outcome,
   Position,
   SavingsParams,
+  savingsTrajectory,
   Security,
   Statistics,
 } from "../calc/esg/esg";
 import { ChartDataSets } from "chart.js";
 import { SavingsParametersInput } from "./savings_input";
-import { Process, take } from "../calc/processes";
-import { investmentProcess } from "../calc/esg/aggregation";
+import {
+  aggregate,
+  count,
+  fmap,
+  Process,
+  sample,
+  take,
+} from "../calc/processes";
+import { aggregateIO, investmentProcess } from "../calc/esg/aggregation";
 
 class ESGProps {
   params: EconomicParams;
@@ -30,6 +38,7 @@ class ESGState {
   readonly savings: SavingsParams;
   readonly displayFreq: number;
   readonly displayPeriodYears: number;
+  readonly numSims: number;
 }
 
 function theoreticInvestmentValue(
@@ -68,11 +77,11 @@ function formatFloat(precision: number): (vals: number[]) => number[] {
 function resampleToFrequency(
   displayPeriodYears: number,
   displayFreq: number,
+  cpi: Process<number>,
   process: {
     evolution: Process<InvestmentOutcome>;
     monthsIdx: Process<number>;
     sentimentOverTime: Process<MarketSentiment>;
-    cpi: Process<number>;
   }
 ): {
   evolution: InvestmentOutcome[];
@@ -82,11 +91,22 @@ function resampleToFrequency(
 } {
   const periods = Math.ceil((12 * displayPeriodYears) / displayFreq);
   return {
-    evolution: take(periods, process.evolution),
-    monthsIdx: take(periods, process.monthsIdx),
-    sentimentOverTime: take(periods, process.sentimentOverTime),
-    cpi: take(periods, process.cpi),
+    evolution: take(periods)(process.evolution),
+    monthsIdx: take(periods)(process.monthsIdx),
+    sentimentOverTime: take(periods)(process.sentimentOverTime),
+    cpi: take(periods)(cpi),
   };
+}
+
+function inflationAdjustmentFactor(
+  params: MarketParams,
+  frequency: number
+): Process<number> {
+  const monthlyCPI = fmap((i: number) =>
+    Math.pow(1 + params.inflation / 12, i)
+  )(count(0));
+
+  return sample<number>(frequency)(monthlyCPI);
 }
 
 export class ESGSimulation extends React.Component<ESGProps, ESGState> {
@@ -98,6 +118,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       savings: props.savings,
       displayFreq: 12,
       displayPeriodYears: 20,
+      numSims: 10,
     };
   }
   readonly formatDollar = formatFloat(1);
@@ -228,6 +249,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       },
     ];
 
+    const sims = this.calculateSims();
     return (
       <div>
         <p>
@@ -248,6 +270,21 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           data={this.state.savings}
           onChange={(data: SavingsParams) => this.onSavingsChange(data)}
         />
+        <div>
+          <p>
+            # sims:{" "}
+            <input
+              type="number"
+              value={this.state.numSims}
+              min={1}
+              max={5000}
+              onChange={(ev) =>
+                this.setState({ numSims: parseInt(ev.target.value) })
+              }
+            />
+          </p>
+        </div>
+        {this.simsChart(sims.monthsIdx, sims.trajectoryDatasets)},
         <div>
           <p>
             Frequency:{" "}
@@ -277,7 +314,6 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         {this.summaryChart(monthsIdx, sentimentDatasets)}
         {this.summaryChart(monthsIdx, summaryDatasets)}
         {this.gainsChart(monthsIdx, statisticsOverTime, adjustForInflation)}
-
         <table>
           <thead>
             <tr key="title">
@@ -325,14 +361,18 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     const process = investmentProcess(
       this.state.displayFreq,
       investments,
-      sentiment,
-      this.state.params
+      sentiment
+    );
+    const cpiProc = inflationAdjustmentFactor(
+      this.state.params,
+      this.state.displayFreq
     );
 
     const { evolution, monthsIdx, sentimentOverTime, cpi } =
       resampleToFrequency(
         this.state.displayPeriodYears,
         this.state.displayFreq,
+        cpiProc,
         process
       );
 
@@ -482,5 +522,85 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         }}
       />
     );
+  }
+
+  private simsChart(monthsIdx: string[], trajectoryDatasets: ChartDataSets[]) {
+    return (
+      <Line
+        width={800}
+        height={400}
+        data={{
+          labels: monthsIdx,
+          datasets: trajectoryDatasets,
+        }}
+        options={{
+          maintainAspectRatio: true,
+          responsive: false,
+          legend: { display: false },
+          scales: {
+            yAxes: [
+              {
+                id: "$",
+                type: "linear",
+                position: "left",
+                scaleLabel: {
+                  labelString: this.state.params.adjustForInflation
+                    ? "adjusted $"
+                    : "nominal $",
+                  display: true,
+                },
+              },
+            ],
+          },
+        }}
+      />
+    );
+  }
+
+  private calculateSims(): {
+    monthsIdx: string[];
+    trajectoryDatasets: ChartDataSets[];
+  } {
+    const { investmentResult: trajectory } = savingsTrajectory(
+      this.state.startingPV,
+      this.state.params,
+      this.state.params,
+      this.state.savings
+    );
+
+    const sampler = aggregate(12, aggregateIO);
+    const periodTake = take(this.state.displayPeriodYears);
+
+    const BASE_SEED = 123;
+    const simulationOutcomes = _.map(_.range(this.state.numSims), (i) =>
+      sampler(trajectory.pick(BASE_SEED + i).investments)
+    );
+    const simulatedFVs: Process<number>[] = _.map(simulationOutcomes, (s) =>
+      fmap((io: InvestmentOutcome): number => io.statistics.fv)(s)
+    );
+    const cpi = inflationAdjustmentFactor(this.state.params, 12);
+    const inflationAdjust = this.state.params.adjustForInflation
+      ? (proc: Process<number>) =>
+          fmap((val: number, cpi: number) => val / cpi)(proc, cpi)
+      : (proc: Process<number>) => proc;
+
+    const monthIdxs = fmap((io: InvestmentOutcome) => io.time)(
+      sampler(trajectory.pick(-1).investments)
+    );
+
+    return {
+      monthsIdx: _.map(periodTake(monthIdxs), (m) => `month ${m}`),
+      trajectoryDatasets: _.map(
+        simulatedFVs,
+        (sims, idx): ChartDataSets => ({
+          label: `sim ${idx}`,
+          data: this.formatDollar(periodTake(inflationAdjust(sims))),
+          yAxisID: "$",
+          fill: false,
+          borderColor: `rgba(0, 0, 255, ${1 / Math.sqrt(this.state.numSims)}`,
+          pointRadius: 0,
+        })
+      ),
+    };
   }
 }

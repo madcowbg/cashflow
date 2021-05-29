@@ -99,13 +99,15 @@ export function stateful<T, S>(
   return statefulWithF;
 }
 
-export function take<V>(num: number, p: Process<V>): V[] {
-  const res: V[] = [];
-  for (let i = 0; i < num; i++) {
-    res.push(p.v);
-    p = p.evolve();
-  }
-  return res;
+export function take(num: number): <V>(p: Process<V>) => V[] {
+  return <V>(p: Process<V>) => {
+    const res: V[] = [];
+    for (let i = 0; i < num; i++) {
+      res.push(p.v);
+      p = p.evolve();
+    }
+    return res;
+  };
 }
 
 export function sample<A>(frequency: number): (pa: Process<A>) => Process<A> {

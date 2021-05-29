@@ -23,11 +23,14 @@ export class SavingsParametersInput extends React.Component<
         <input
           type="number"
           value={this.state.monthlyInvestment}
-          onChange={(ev) =>
-            this.setState({ monthlyInvestment: parseFloat(ev.target.value) })
-          }
+          onChange={(ev) => this.setSavings(parseFloat(ev.target.value))}
         />
       </div>
     );
+  }
+
+  private setSavings(monthlyInvestment: number) {
+    this.setState({ monthlyInvestment });
+    this.onChange({ monthlyInvestment });
   }
 }
