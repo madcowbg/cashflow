@@ -96,7 +96,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       params: props.params,
       startingPV: 250000,
       savings: props.savings,
-      displayFreq: 1,
+      displayFreq: 12,
       displayPeriodYears: 20,
     };
   }
@@ -312,13 +312,15 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     sentimentOverTime: MarketSentiment[];
     adjustForInflation: (vals: number[]) => number[];
   } {
-    const { initialInvestmentVehicle, sentiment, investments } =
+    const { initialInvestmentVehicle, investmentResult: trajectory } =
       savingsTrajectory(
         this.state.startingPV,
         this.state.params,
         this.state.params,
         this.state.savings
       );
+
+    const { sentiment, investments } = trajectory.pick(14123);
 
     const process = investmentProcess(
       this.state.displayFreq,

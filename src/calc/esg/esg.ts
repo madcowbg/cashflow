@@ -1,5 +1,5 @@
 import * as _ from "lodash";
-import { random_mean_reverting } from "../mean_reversion";
+import { Random, random_mean_reverting } from "../mean_reversion";
 import { count, fmap, Process, stateful } from "../processes";
 
 export interface MarketParams {
@@ -343,21 +343,25 @@ export function revertingSentiment(
   economy: MarketParams,
   security: Security,
   sentiment: MarketSentiment
-): Process<MarketSentiment> {
+): Random<Process<MarketSentiment>> {
   const minDiscountRate = dividendGrowth(security, economy);
   const optionalDR = sentiment.discountRate - minDiscountRate;
-  const sentiment_optional_logchange = random_mean_reverting(
-    0,
-    0,
-    0.1,
-    0.8 / 12,
-    1251253
-  );
+  return {
+    pick(seed: number) {
+      const sentiment_optional_logchange = random_mean_reverting(
+        0,
+        0,
+        0.1,
+        0.8 / 12
+      ).pick(seed);
 
-  return fmap((sentiment_diff_loglevel_value: number) => ({
-    discountRate:
-      minDiscountRate + optionalDR * Math.exp(sentiment_diff_loglevel_value),
-  }))(sentiment_optional_logchange);
+      return fmap((sentiment_diff_loglevel_value: number) => ({
+        discountRate:
+          minDiscountRate +
+          optionalDR * Math.exp(sentiment_diff_loglevel_value),
+      }))(sentiment_optional_logchange);
+    },
+  };
 }
 
 export function priceDDM(
@@ -389,17 +393,20 @@ export function savingsTrajectory(
   savingsParams: SavingsParams
 ): {
   initialInvestmentVehicle: Security;
-  sentiment: Process<MarketSentiment>;
-  investments: Process<InvestmentOutcome>;
+  investmentResult: Random<{
+    sentiment: Process<MarketSentiment>;
+    investments: Process<InvestmentOutcome>;
+  }>;
 } {
   const initialInvestmentPrice = 100;
-  const initialInvestment = {
-    numberOfShares: startingPV / initialInvestmentPrice,
-  };
-  const initialInvestmentVehicle = {
+  const initialInvestmentVehicle: Security = {
     currentAnnualDividends:
       initialInvestmentPrice * investmentParams.currentDividendYield,
     realDividendGrowth: investmentParams.realDividendGrowth,
+  };
+
+  const initialInvestment: Position = {
+    numberOfShares: startingPV / initialInvestmentPrice,
   };
 
   const initialSentiment = impliedSentiment(
@@ -408,27 +415,34 @@ export function savingsTrajectory(
     marketParams
   );
 
-  const sentiment = revertingSentiment(
-    marketParams,
+  return {
     initialInvestmentVehicle,
-    initialSentiment
-  );
+    investmentResult: {
+      pick(seed: number) {
+        const sentiment = revertingSentiment(
+          marketParams,
+          initialInvestmentVehicle,
+          initialSentiment
+        ).pick(seed);
 
-  const savings = inflationAdjustedSavings(marketParams, savingsParams);
+        const savings = inflationAdjustedSavings(marketParams, savingsParams);
 
-  const securityAtTimes = evaluateSecurity(
-    marketParams,
-    sentiment,
-    initialInvestmentVehicle,
-    0
-  );
+        const securityAtTimes = evaluateSecurity(
+          marketParams,
+          sentiment,
+          initialInvestmentVehicle,
+          0
+        );
 
-  const investments: Process<InvestmentOutcome> = investOverTime(
-    0,
-    securityAtTimes,
-    initialInvestment,
-    savings,
-    fullReinvestmentStrategy
-  );
-  return { initialInvestmentVehicle, sentiment, investments };
+        const investments: Process<InvestmentOutcome> = investOverTime(
+          0,
+          securityAtTimes,
+          initialInvestment,
+          savings,
+          fullReinvestmentStrategy
+        );
+        return { sentiment, investments };
+      },
+    },
+  };
 }
