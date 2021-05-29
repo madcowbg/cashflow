@@ -17,7 +17,7 @@ import {
   priceDDM,
   SavingsParams,
   Security,
-} from "../src/calc/esg";
+} from "../src/calc/esg/esg";
 import _ = require("lodash");
 import { constant } from "../src/calc/processes";
 

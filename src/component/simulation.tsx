@@ -5,24 +5,19 @@ import { Line } from "react-chartjs-2";
 import { EconometricInputComponent, EconomicParams } from "../calc/econometric";
 import {
   currentYield,
-  evaluateSecurity,
-  fullReinvestmentStrategy,
-  impliedSentiment,
-  inflationAdjustedSavings,
-  InvestmentDecision,
   InvestmentOutcome,
-  investOverTime,
+  savingsTrajectory,
   MarketSentiment,
   Outcome,
   Position,
-  revertingSentiment,
   SavingsParams,
   Security,
   Statistics,
-} from "../calc/esg";
+} from "../calc/esg/esg";
 import { ChartDataSets } from "chart.js";
 import { SavingsParametersInput } from "./savings_input";
-import { aggregate, count, fmap, sample, take } from "../calc/processes";
+import { Process, take } from "../calc/processes";
+import { investmentProcess } from "../calc/esg/aggregation";
 
 class ESGProps {
   params: EconomicParams;
@@ -54,24 +49,6 @@ function theoreticInvestmentValue(
   );
 }
 
-function fromParams(
-  params: EconomicParams,
-  numberOfShares: number,
-  initialInvestmentPrice: number
-): {
-  initialInvestment: Position;
-  initialInvestmentVehicle: Security;
-} {
-  return {
-    initialInvestment: { numberOfShares },
-    initialInvestmentVehicle: {
-      currentAnnualDividends:
-        initialInvestmentPrice * params.currentDividendYield,
-      realDividendGrowth: params.realDividendGrowth,
-    },
-  };
-}
-
 function adjustForInflation(cpi: number[]): (vals: number[]) => number[] {
   return (vals: number[]): number[] => {
     if (cpi.length != vals.length) {
@@ -88,36 +65,27 @@ function formatFloat(precision: number): (vals: number[]) => number[] {
   return (vals) => _.map(vals, (val) => Math.round(val * size) / size);
 }
 
-function aggregateD(ids: InvestmentDecision[]): InvestmentDecision {
+function resampleToFrequency(
+  displayPeriodYears: number,
+  displayFreq: number,
+  process: {
+    evolution: Process<InvestmentOutcome>;
+    monthsIdx: Process<number>;
+    sentimentOverTime: Process<MarketSentiment>;
+    cpi: Process<number>;
+  }
+): {
+  evolution: InvestmentOutcome[];
+  monthsIdx: number[];
+  sentimentOverTime: MarketSentiment[];
+  cpi: number[];
+} {
+  const periods = Math.ceil((12 * displayPeriodYears) / displayFreq);
   return {
-    time: _.last(_.map(ids, (dec) => dec.time)),
-    transactions: [].concat(...ids.map((dec) => dec.transactions)),
-  };
-}
-
-function aggregateO(outcomes: Outcome[]): Outcome {
-  return {
-    decision: aggregateD(outcomes.map((o) => o.decision)),
-    investment: _.last(outcomes.map((io) => io.investment)),
-  };
-}
-
-function aggregateS(statistics: Statistics[]): Statistics {
-  return {
-    externalCashflow: _.sum(statistics.map((s) => s.externalCashflow)),
-    fv: _.last(statistics.map((s) => s.fv)),
-    totalBoughtDollar: _.sum(statistics.map((s) => s.totalBoughtDollar)),
-    totalDividends: _.sum(statistics.map((s) => s.totalDividends)),
-    totalSoldDollar: _.sum(statistics.map((s) => s.totalSoldDollar)),
-  };
-}
-
-function aggregateIO(...args: InvestmentOutcome[]): InvestmentOutcome {
-  return {
-    time: _.last(_.map(args, (io) => io.time)),
-    outcome: aggregateO(args.map((io) => io.outcome)),
-    statistics: aggregateS(args.map((io) => io.statistics)),
-    evolvedVehicle: _.last(_.map(args, (io) => io.evolvedVehicle)),
+    evolution: take(periods, process.evolution),
+    monthsIdx: take(periods, process.monthsIdx),
+    sentimentOverTime: take(periods, process.sentimentOverTime),
+    cpi: take(periods, process.cpi),
   };
 }
 
@@ -344,70 +312,27 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     sentimentOverTime: MarketSentiment[];
     adjustForInflation: (vals: number[]) => number[];
   } {
-    const initialInvestmentPrice = 100;
-    const numberOfShares = this.state.startingPV / initialInvestmentPrice;
-    const { initialInvestment, initialInvestmentVehicle } = fromParams(
-      this.state.params,
-      numberOfShares,
-      initialInvestmentPrice
-    );
+    const { initialInvestmentVehicle, sentiment, investments } =
+      savingsTrajectory(
+        this.state.startingPV,
+        this.state.params,
+        this.state.params,
+        this.state.savings
+      );
 
-    const initialSentiment = impliedSentiment(
-      initialInvestmentVehicle,
-      100,
+    const process = investmentProcess(
+      this.state.displayFreq,
+      investments,
+      sentiment,
       this.state.params
     );
 
-    const sentiment = revertingSentiment(
-      this.state.params,
-      initialInvestmentVehicle,
-      initialSentiment
-    );
-
-    const savings = inflationAdjustedSavings(
-      this.state.params,
-      this.state.savings
-    );
-
-    const securityAtTimes = evaluateSecurity(
-      this.state.params,
-      sentiment,
-      initialInvestmentVehicle,
-      0
-    );
-    const investments = investOverTime(
-      0,
-      securityAtTimes,
-      initialInvestment,
-      savings,
-      fullReinvestmentStrategy
-    );
-
-    const periods = Math.ceil(
-      (12 * this.state.displayPeriodYears) / this.state.displayFreq
-    );
-    const evolution: InvestmentOutcome[] = take(
-      periods,
-      aggregate<InvestmentOutcome>(
+    const { evolution, monthsIdx, sentimentOverTime, cpi } =
+      resampleToFrequency(
+        this.state.displayPeriodYears,
         this.state.displayFreq,
-        aggregateIO
-      )(investments)
-    );
-    const monthsIdx: number[] = take(
-      periods,
-      sample<number>(this.state.displayFreq)(count(0))
-    );
-    const sentimentOverTime = take(
-      periods,
-      sample<MarketSentiment>(this.state.displayFreq)(sentiment)
-    );
-    const monthlyCPI = fmap((i: number) =>
-      Math.pow(1 + this.state.params.inflation / 12, i)
-    )(count(0));
-    const cpi = take(
-      periods,
-      sample<number>(this.state.displayFreq)(monthlyCPI)
-    );
+        process
+      );
 
     return {
       investmentOverTime: _.map(evolution, (e) => e.outcome.investment),

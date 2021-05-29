@@ -1,9 +1,14 @@
 import * as _ from "lodash";
-import { random_mean_reverting } from "./mean_reversion";
-import { count, fmap, Process, stateful } from "./processes";
+import { random_mean_reverting } from "../mean_reversion";
+import { count, fmap, Process, stateful } from "../processes";
 
 export interface MarketParams {
   inflation: number; // %
+}
+
+export interface InvestmentParams {
+  currentDividendYield: number; // %
+  realDividendGrowth: number; // %
 }
 
 export interface Security {
@@ -375,4 +380,55 @@ export function inflationAdjustedSavings(
     monthlyInvestment:
       savings.monthlyInvestment * Math.pow(1 + params.inflation / 12, tMonth),
   }))(count(0));
+}
+
+export function savingsTrajectory(
+  startingPV: number,
+  marketParams: MarketParams,
+  investmentParams: InvestmentParams,
+  savingsParams: SavingsParams
+): {
+  initialInvestmentVehicle: Security;
+  sentiment: Process<MarketSentiment>;
+  investments: Process<InvestmentOutcome>;
+} {
+  const initialInvestmentPrice = 100;
+  const initialInvestment = {
+    numberOfShares: startingPV / initialInvestmentPrice,
+  };
+  const initialInvestmentVehicle = {
+    currentAnnualDividends:
+      initialInvestmentPrice * investmentParams.currentDividendYield,
+    realDividendGrowth: investmentParams.realDividendGrowth,
+  };
+
+  const initialSentiment = impliedSentiment(
+    initialInvestmentVehicle,
+    100,
+    marketParams
+  );
+
+  const sentiment = revertingSentiment(
+    marketParams,
+    initialInvestmentVehicle,
+    initialSentiment
+  );
+
+  const savings = inflationAdjustedSavings(marketParams, savingsParams);
+
+  const securityAtTimes = evaluateSecurity(
+    marketParams,
+    sentiment,
+    initialInvestmentVehicle,
+    0
+  );
+
+  const investments: Process<InvestmentOutcome> = investOverTime(
+    0,
+    securityAtTimes,
+    initialInvestment,
+    savings,
+    fullReinvestmentStrategy
+  );
+  return { initialInvestmentVehicle, sentiment, investments };
 }

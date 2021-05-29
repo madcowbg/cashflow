@@ -1,5 +1,5 @@
 import * as React from "react";
-import { SavingsParams } from "../calc/esg";
+import { SavingsParams } from "../calc/esg/esg";
 
 export class SavingsParametersInput extends React.Component<
   { onChange: (data: SavingsParams) => void; data: SavingsParams },
