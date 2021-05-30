@@ -39,6 +39,7 @@ class ESGState {
   readonly displayFreq: number;
   readonly displayPeriodYears: number;
   readonly numSims: number;
+  readonly simIndex: number;
 }
 
 function theoreticInvestmentValue(
@@ -109,6 +110,11 @@ function inflationAdjustmentFactor(
   return sample<number>(frequency)(monthlyCPI);
 }
 
+function seedForSimIndex(i: number): number {
+  const BASE_SEED = 123;
+  return BASE_SEED + i;
+}
+
 export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   constructor(props: ESGProps) {
     super(props);
@@ -116,9 +122,10 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       params: props.params,
       startingPV: 250000,
       savings: props.savings,
-      displayFreq: 12,
+      displayFreq: 1,
       displayPeriodYears: 20,
-      numSims: 10,
+      numSims: 19,
+      simIndex: 18,
     };
   }
   readonly formatDollar = formatFloat(1);
@@ -166,6 +173,22 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         yAxisID: "$",
       },
       {
+        label: "Num shares",
+        data: this.formatDollar(
+          adjustForInflation(_.map(statisticsOverTime, (s) => s.numberOfShares))
+        ),
+        yAxisID: "#",
+      },
+      {
+        label: "Num bought shares",
+        data: this.formatDollar(
+          adjustForInflation(
+            _.map(statisticsOverTime, (s) => s.totalBoughtNumShares)
+          )
+        ),
+        yAxisID: "#",
+      },
+      {
         label: "Investment Current Market Price ($)",
         data: this.formatDollar(
           adjustForInflation(_.map(statisticsOverTime, (s) => s.fv))
@@ -184,15 +207,6 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         data: this.formatDollar(
           adjustForInflation(
             _.map(statisticsOverTime, (s) => s.totalBoughtDollar)
-          )
-        ),
-        yAxisID: "$ small",
-      },
-      {
-        label: "Total Sold ($)",
-        data: this.formatDollar(
-          adjustForInflation(
-            _.map(statisticsOverTime, (s) => s.totalSoldDollar)
           )
         ),
         yAxisID: "$ small",
@@ -287,6 +301,18 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         {this.simsChart(sims.monthsIdx, sims.trajectoryDatasets)},
         <div>
           <p>
+            Sim index:{" "}
+            <input
+              type="number"
+              value={this.state.simIndex}
+              min={0}
+              max={this.state.numSims - 1}
+              onChange={(ev) =>
+                this.setState({ simIndex: parseInt(ev.target.value) })
+              }
+            />
+          </p>
+          <p>
             Frequency:{" "}
             <input
               type="number"
@@ -356,7 +382,9 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         this.state.savings
       );
 
-    const { sentiment, investments } = trajectory.pick(14123);
+    const { sentiment, investments } = trajectory.pick(
+      seedForSimIndex(this.state.simIndex)
+    );
 
     const process = investmentProcess(
       this.state.displayFreq,
@@ -433,6 +461,11 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
                 ticks: {
                   min: 0,
                 },
+              },
+              {
+                id: "#",
+                type: "linear",
+                position: "right",
               },
             ],
           },
@@ -571,9 +604,8 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     const sampler = aggregate(12, aggregateIO);
     const periodTake = take(this.state.displayPeriodYears);
 
-    const BASE_SEED = 123;
     const simulationOutcomes = _.map(_.range(this.state.numSims), (i) =>
-      sampler(trajectory.pick(BASE_SEED + i).investments)
+      sampler(trajectory.pick(seedForSimIndex(i)).investments)
     );
     const simulatedFVs: Process<number>[] = _.map(simulationOutcomes, (s) =>
       fmap((io: InvestmentOutcome): number => io.statistics.fv)(s)

@@ -21,10 +21,11 @@ export interface Position {
 }
 
 export interface Statistics {
+  numberOfShares: number;
   fv: number;
   totalDividends: number;
   totalBoughtDollar: number;
-  totalSoldDollar: number;
+  totalBoughtNumShares: number;
   externalCashflow: number;
 }
 
@@ -86,10 +87,11 @@ export function calculateStatistics(
 ): Statistics {
   const agg = aggregated(transactions);
   return {
+    numberOfShares: investment.numberOfShares,
     fv: investment.numberOfShares * futurePrice,
     totalDividends: agg.totalDividends,
-    totalBoughtDollar: agg.totalBoughtDollar,
-    totalSoldDollar: agg.totalSoldDollar,
+    totalBoughtDollar: agg.totalBoughtDollar - agg.totalSoldDollar,
+    totalBoughtNumShares: agg.totalBoughtNumShares - agg.totalSoldNumShares,
     externalCashflow: savings.monthlyInvestment,
   };
 }

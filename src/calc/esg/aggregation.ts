@@ -25,11 +25,12 @@ function aggregateO(outcomes: Outcome[]): Outcome {
 
 function aggregateS(statistics: Statistics[]): Statistics {
   return {
+    numberOfShares: _.last(statistics).numberOfShares,
     externalCashflow: _.sum(statistics.map((s) => s.externalCashflow)),
-    fv: _.last(statistics.map((s) => s.fv)),
+    fv: _.last(statistics).fv,
     totalBoughtDollar: _.sum(statistics.map((s) => s.totalBoughtDollar)),
     totalDividends: _.sum(statistics.map((s) => s.totalDividends)),
-    totalSoldDollar: _.sum(statistics.map((s) => s.totalSoldDollar)),
+    totalBoughtNumShares: _.sum(statistics.map((s) => s.totalBoughtNumShares)),
   };
 }
 

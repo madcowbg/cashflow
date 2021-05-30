@@ -112,7 +112,7 @@ window.addEventListener("DOMContentLoaded", () => {
         adjustForInflation: true,
       },
       savings: {
-        monthlyInvestment: 5000,
+        monthlyInvestment: -1500,
       },
     }),
     document.getElementById("portfolio-simulation")
