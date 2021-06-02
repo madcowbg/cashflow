@@ -88,8 +88,9 @@ describe("ESG", () => {
     ).to.deep.eq({
       fv: 605,
       totalDividends: 5,
+      numberOfShares: 3.025,
       totalBoughtDollar: 5,
-      totalSoldDollar: 0,
+      totalBoughtNumShares: 0.025,
       externalCashflow: 1000,
     });
   });
@@ -131,9 +132,10 @@ describe("ESG", () => {
         },
         statistics: {
           fv: 1606.15,
+          numberOfShares: 8.015387174582052,
+          totalBoughtNumShares: 5.015387174582052,
           totalBoughtDollar: 1005,
           totalDividends: 5,
-          totalSoldDollar: 0,
           externalCashflow: 1000,
         },
         evolvedVehicle: {
@@ -155,8 +157,9 @@ describe("ESG", () => {
       expect(statistics).to.deep.eq({
         totalBoughtDollar: 0,
         fv: 300,
+        numberOfShares: 3,
+        totalBoughtNumShares: 0,
         totalDividends: 0,
-        totalSoldDollar: 0,
         externalCashflow: 1000,
       });
     });
@@ -171,8 +174,9 @@ describe("ESG", () => {
       expect(statistics).to.deep.eq({
         fv: 300,
         totalBoughtDollar: 0,
+        totalBoughtNumShares: 0,
+        numberOfShares: 3,
         totalDividends: 8,
-        totalSoldDollar: 0,
         externalCashflow: 1000,
       });
     });
@@ -192,7 +196,8 @@ describe("ESG", () => {
         totalDividends: 8,
         fv: 300,
         totalBoughtDollar: 6,
-        totalSoldDollar: 0,
+        totalBoughtNumShares: 4,
+        numberOfShares: 3,
         externalCashflow: 1000,
       });
     });
@@ -213,8 +218,9 @@ describe("ESG", () => {
       expect(statistics).to.deep.eq({
         totalDividends: 8,
         fv: 300,
-        totalBoughtDollar: 6,
-        totalSoldDollar: 4,
+        totalBoughtDollar: 2,
+        numberOfShares: 3,
+        totalBoughtNumShares: 0,
         externalCashflow: 1000,
       });
     });
