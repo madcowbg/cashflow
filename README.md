@@ -21,7 +21,7 @@ The app embodies the following assumptions:
 Research shows [TODO cite] that long-term growth fairly closely follows the intrinsic value. The Gordon equation implies
 a long-term equity market return equal to:
 
-<img src="https://latex.codecogs.com/gif.latex?mr = cdy + dg + infl" />,
+![Gordon equation](<https://latex.codecogs.com/gif.latex?mr = cdy + dg + infl>),
 
 where mr is the market return, cdy is the current dividend yield, dg is the (real) dividend growth and infl is the
 realized inflation.
@@ -53,7 +53,7 @@ lower than the volatility of the stock market. This means that dividends forecas
 
 In this application the dividends are assumed to have a random realization represented by a dividend growth multiplier, which means that:
 
-<img src="https://latex.codecogs.com/gif.latex?div_{t+1} = div_t * mult_t * (1 + growth)" />,
+![dividend evolution formula](<https://latex.codecogs.com/gif.latex?div_{t+1} = div_t * mult_t * (1 + growth)>)
 
 where the multiplier is a lognormal random variable with mean of 1 and given standard deviation.
 
