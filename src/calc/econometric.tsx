@@ -1,7 +1,7 @@
 import * as React from "react";
 import * as _ from "lodash";
 import { saveSettings } from "../settings";
-import { InvestmentParams, MarketParams } from "./esg/esg";
+import { DividendParams, InvestmentParams, MarketParams } from "./esg/esg";
 
 export class EconometricInputComponent extends React.Component<
   { data: EconomicParams; onChange: (newData: EconomicParams) => void },
@@ -51,6 +51,19 @@ export class EconometricInputComponent extends React.Component<
               })
             }
             value={this.state.realDividendGrowth * 100}
+          />
+        </p>
+        <p>
+          Dividend realization factor standard deviation:
+          <input
+            type="number"
+            value={this.state.realizedDividendAnnualStandardDeviation * 100}
+            onChange={(e) =>
+              this.handleChange({
+                realizedDividendAnnualStandardDeviation:
+                  parseFloat(e.target.value) / 100,
+              })
+            }
           />
         </p>
         <p>
@@ -104,7 +117,10 @@ export class EconometricInputComponent extends React.Component<
   }
 }
 
-export interface EconomicParams extends MarketParams, InvestmentParams {
+export interface EconomicParams
+  extends MarketParams,
+    InvestmentParams,
+    DividendParams {
   marketPriceOf100DollarInvestment: number;
   discountRate: number;
   adjustForInflation: boolean;

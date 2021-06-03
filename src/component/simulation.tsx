@@ -379,6 +379,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         this.state.startingPV,
         this.state.params,
         this.state.params,
+        this.state.params,
         this.state.savings
       );
 
@@ -596,6 +597,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   } {
     const { investmentResult: trajectory } = savingsTrajectory(
       this.state.startingPV,
+      this.state.params,
       this.state.params,
       this.state.params,
       this.state.savings

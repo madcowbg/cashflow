@@ -395,20 +395,25 @@ export function inflationAdjustedSavings(
   }))(count(0));
 }
 
-function defaultRealizedDividendRatio(): Random<Process<number>> {
-  const annualDividendChangeStd = 0.03; // % of dividend
-  const annualDividendChange = 0.065; // % of dividend assumed, kind of unused - should be related to realDividendGrowth! FIXME
+function defaultRealizedDividendRatio(
+  params: DividendParams
+): Random<Process<number>> {
   const realizedDividendLNRatio = white_noise(
     0,
-    annualDividendChangeStd / Math.sqrt(12)
+    params.realizedDividendAnnualStandardDeviation / Math.sqrt(12)
   );
   return rmap(fmap(Math.exp))(realizedDividendLNRatio);
+}
+
+export interface DividendParams {
+  realizedDividendAnnualStandardDeviation: number; // as percentage of current dividend level
 }
 
 export function savingsTrajectory(
   startingPV: number,
   marketParams: MarketParams,
   investmentParams: InvestmentParams,
+  dividendParams: DividendParams,
   savingsParams: SavingsParams
 ): {
   initialInvestmentVehicle: Security;
@@ -447,9 +452,9 @@ export function savingsTrajectory(
         const savings = inflationAdjustedSavings(marketParams, savingsParams);
 
         const REALIZATION_DIVIDEND_RATIO_SEED = 5123;
-        const realizedDividendRatio = defaultRealizedDividendRatio().pick(
-          REALIZATION_DIVIDEND_RATIO_SEED + seed
-        );
+        const realizedDividendRatio = defaultRealizedDividendRatio(
+          dividendParams
+        ).pick(REALIZATION_DIVIDEND_RATIO_SEED + seed);
 
         const securityAtTimes = evaluateSecurity(
           marketParams,
