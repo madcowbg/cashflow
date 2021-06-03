@@ -630,7 +630,6 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           yAxisID: "$",
           fill: false,
           borderColor: `rgba(0, 0, 255, ${1 / Math.sqrt(this.state.numSims)}`,
-          pointRadius: 0,
         })
       ),
     };

@@ -7,10 +7,10 @@ describe("mean_reversion", () => {
   it("should have specific value", () => {
     const sample = take(10)(random_mean_reverting(2, 3, 0.2, 0.2).pick(124123));
     expect(sample).to.deep.eq([
-      2.4555390471450083, 2.3623352722243194, 2.4103130405664146,
-      2.6443342208050433, 2.8256313969932365, 2.7101018429434753,
-      2.757225912048045, 2.8296802681859368, 2.701086102450288,
-      2.9354080492394625,
+      2.043097048099616, 2.3838582319001946, 2.427531408307115,
+      2.4004209392766898, 2.6305007717705537, 2.906332875609883,
+      2.9142107381811715, 3.1333008487383776, 2.9439825668922404,
+      3.06610744551609,
     ]);
   });
 
@@ -40,5 +40,10 @@ describe("mean_reversion", () => {
     );
 
     expect(corr).to.approximately(0, 0.05);
+  });
+
+  it("should take the same random values if called several times (stabilized)", () => {
+    const process = random_mean_reverting(2, 3, 0.2, 0.2).pick(123);
+    expect(take(10)(process)).to.deep.eq(take(10)(process));
   });
 });
