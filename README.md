@@ -61,6 +61,6 @@ A quick review of the S&P dividends shows standard deviation of annual dividend 
 
 ## Screenshots
 
-![visualization of portfolio evolution](./docs/screenshot-0.0.2.png)
+![visualization of portfolio evolution](./docs/screenshot-0.0.2.PNG)
 
 [CC-BY-NC-SA-4.0](LICENSE.md)
