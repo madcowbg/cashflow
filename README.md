@@ -49,15 +49,26 @@ important. Quite the opposite, dividends, and especially the long-term expectati
 investment assets to have quantitative value.
 
 There is a paradox that dividends themselves are fairly stable over time, and their volatilities are order of magnitude
-lower than the volatility of the stock market. This means that dividends forecasts are more stable and accurate than market movement forecasts.
+lower than the volatility of the stock market. This means that dividends forecasts are more stable and accurate than
+market movement forecasts.
 
-In this application the dividends are assumed to have a random realization represented by a dividend growth multiplier, which means that:
+In this application the dividends are assumed to have a random realization represented by a dividend growth multiplier,
+which means that:
 
 ![dividend evolution formula](<https://latex.codecogs.com/gif.latex?div_{t+1} = div_t * mult_t * (1 + growth)>)
 
 where the multiplier is a lognormal random variable with mean of 1 and given standard deviation.
 
-A quick review of the S&P dividends shows standard deviation of annual dividend log-change to be 0.03, so this is the default value provided.
+A quick review of the S&P dividends in 2014-2021 (TODO this is too short and may not be representative long-term, re-do
+the analysis with more data) shows standard deviation of annual dividend log-change to be 0.03, so this is the default
+value provided, the portfolio value with different random realizations is still pretty focused:
+![visualization of portfolio evolution](./docs/stdev-0.03.png)
+
+If instead we assumed higher volatility of actual realized dividends (quite unrealistic), the chart produces much bigger
+difference between realizations:
+![visualization of portfolio evolution](./docs/stdev-0.1.PNG)
+
+This is similar to what simply the simulation of independent random market returns will produce.
 
 ## Screenshots
 
