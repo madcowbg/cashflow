@@ -5,7 +5,7 @@ import {
   currentYield,
   dividendGrowth,
   evaluateSecurity,
-  evolveVehicle,
+  evolveSecurity,
   fullReinvestmentStrategy,
   impliedSentiment,
   inflationAdjustedSavings,
@@ -99,8 +99,9 @@ describe("ESG", () => {
     const sentiment = impliedSentiment(investmentVehicle, 200, params);
     const securityAtTime = evaluateSecurity(
       params,
-      constant(sentiment),
       investmentVehicle,
+      constant(sentiment),
+      constant(1),
       0
     );
     const result = investOverTime(
@@ -238,7 +239,7 @@ describe("ESG", () => {
     });
 
     it("should have implied discountRate equal to the marketReturn", () => {
-      const newSecurity = evolveVehicle(params, security);
+      const newSecurity = evolveSecurity(params, security, 1);
 
       expect(newSecurity).to.deep.eq({
         currentAnnualDividends: 1.0019166666666666,
@@ -247,7 +248,7 @@ describe("ESG", () => {
     });
 
     it("should change required dividend yield by market sentiment", () => {
-      const newSecurity = evolveVehicle(params, security);
+      const newSecurity = evolveSecurity(params, security, 1);
 
       expect(newSecurity).to.deep.eq({
         currentAnnualDividends: 1.0019166666666666,

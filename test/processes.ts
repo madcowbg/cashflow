@@ -9,7 +9,6 @@ import {
 } from "../src/calc/processes";
 import { expect } from "chai";
 import _ = require("lodash");
-import { random_mean_reverting } from "../src/calc/mean_reversion";
 
 describe("unit", () => {
   it("should always produce the same value", () => {

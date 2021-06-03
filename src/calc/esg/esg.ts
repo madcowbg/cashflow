@@ -1,5 +1,10 @@
 import * as _ from "lodash";
-import { Random, random_mean_reverting } from "../mean_reversion";
+import {
+  Random,
+  random_mean_reverting,
+  rmap,
+  white_noise,
+} from "../random_processes";
 import { count, fmap, Process, stateful } from "../processes";
 
 export interface MarketParams {
@@ -170,25 +175,26 @@ export interface SecurityAtTime {
 
 export function evaluateSecurity(
   economy: MarketParams,
+  initialVehicle: Security,
   sentiment: Process<MarketSentiment>,
-  vehicle: Security,
+  realizedDividendRatio: Process<number>,
   T: number
 ): Process<SecurityAtTime> {
-  type State = { t: number; v: Security };
-  const evolvingVehicle = stateful(
-    (state: State): State => ({
-      t: state.t + 1,
-      v: evolveVehicle(economy, state.v),
+  type State = { time: number; security: Security };
+  const evolvingState = stateful(
+    (state: State, realizedDividendRatio: number): State => ({
+      time: state.time + 1,
+      security: evolveSecurity(economy, state.security, realizedDividendRatio),
     })
-  )({ t: T, v: vehicle });
+  )({ time: T, security: initialVehicle }, realizedDividendRatio);
 
   return fmap(
     (state: State, s: MarketSentiment): SecurityAtTime => ({
-      time: state.t,
-      security: state.v,
-      price: priceDDM(state.v, economy, s),
+      time: state.time,
+      security: state.security,
+      price: priceDDM(state.security, economy, s),
     })
-  )(evolvingVehicle, sentiment);
+  )(evolvingState, sentiment);
 }
 
 export interface InvestmentOutcome {
@@ -329,25 +335,26 @@ export interface MarketSentiment {
   discountRate: number;
 }
 
-export function evolveVehicle(
+export function evolveSecurity(
   economy: MarketParams,
-  vehicle: Security
+  vehicle: Security,
+  realizedDividendRatio: number
 ): Security {
   return {
     currentAnnualDividends:
+      realizedDividendRatio *
       vehicle.currentAnnualDividends *
       (1 + dividendGrowth(vehicle, economy) / 12),
     realDividendGrowth: vehicle.realDividendGrowth,
   };
 }
 
-export function revertingSentiment(
+export function defaultRevertingSentiment(
   economy: MarketParams,
-  security: Security,
-  sentiment: MarketSentiment
+  minDiscountRate: number,
+  initialSentiment: MarketSentiment
 ): Random<Process<MarketSentiment>> {
-  const minDiscountRate = dividendGrowth(security, economy);
-  const optionalDR = sentiment.discountRate - minDiscountRate;
+  const optionalDR = initialSentiment.discountRate - minDiscountRate;
   return {
     pick(seed: number) {
       const sentiment_optional_logchange = random_mean_reverting(
@@ -388,6 +395,16 @@ export function inflationAdjustedSavings(
   }))(count(0));
 }
 
+function defaultRealizedDividendRatio(): Random<Process<number>> {
+  const annualDividendChangeStd = 0.03; // % of dividend
+  const annualDividendChange = 0.065; // % of dividend assumed, kind of unused - should be related to realDividendGrowth! FIXME
+  const realizedDividendLNRatio = white_noise(
+    0,
+    annualDividendChangeStd / Math.sqrt(12)
+  );
+  return rmap(fmap(Math.exp))(realizedDividendLNRatio);
+}
+
 export function savingsTrajectory(
   startingPV: number,
   marketParams: MarketParams,
@@ -421,18 +438,24 @@ export function savingsTrajectory(
     initialInvestmentVehicle,
     investmentResult: {
       pick(seed: number) {
-        const sentiment = revertingSentiment(
+        const sentiment = defaultRevertingSentiment(
           marketParams,
-          initialInvestmentVehicle,
+          dividendGrowth(initialInvestmentVehicle, marketParams),
           initialSentiment
         ).pick(seed);
 
         const savings = inflationAdjustedSavings(marketParams, savingsParams);
 
+        const REALIZATION_DIVIDEND_RATIO_SEED = 5123;
+        const realizedDividendRatio = defaultRealizedDividendRatio().pick(
+          REALIZATION_DIVIDEND_RATIO_SEED + seed
+        );
+
         const securityAtTimes = evaluateSecurity(
           marketParams,
-          sentiment,
           initialInvestmentVehicle,
+          sentiment,
+          realizedDividendRatio,
           0
         );
 

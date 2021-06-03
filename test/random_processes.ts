@@ -1,4 +1,4 @@
-import { random_mean_reverting } from "../src/calc/mean_reversion";
+import { random_mean_reverting } from "../src/calc/random_processes";
 import { expect } from "chai";
 import { take } from "../src/calc/processes";
 import _ = require("lodash");
