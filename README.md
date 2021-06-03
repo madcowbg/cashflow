@@ -62,10 +62,12 @@ where the multiplier is a lognormal random variable with mean of 1 and given sta
 A quick review of the S&P dividends in 2014-2021 (TODO this is too short and may not be representative long-term, re-do
 the analysis with more data) shows standard deviation of annual dividend log-change to be 0.03, so this is the default
 value provided, the portfolio value with different random realizations is still pretty focused:
+
 ![visualization of portfolio evolution](./docs/stdev-0.03.png)
 
 If instead we assumed higher volatility of actual realized dividends (quite unrealistic), the chart produces much bigger
 difference between realizations:
+
 ![visualization of portfolio evolution](./docs/stdev-0.1.PNG)
 
 This is similar to what simply the simulation of independent random market returns will produce.
