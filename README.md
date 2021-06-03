@@ -2,6 +2,8 @@
 
 # Manifesto
 
+## Assumptions
+
 The app embodies the following assumptions:
 
 * Current market value is a faulty measure of retirement portfolios and portfolio health.
@@ -38,10 +40,27 @@ fixed future growth rate is unrealistic.
 consequently future returns should be low)
 
 The goal of the application is to provide a convenient way to visualize, analyze and simulate the long-term behavior of
-investment portfolios based on their cashflows
+investment portfolios based on their cashflows.
+
+## Dividends
+
+There is a recent-ish resurgence of the cargo cult masquerading as investing that assumes that dividends are not
+important. Quite the opposite, dividends, and especially the long-term expectation of dividends is what allows
+investment assets to have quantitative value.
+
+There is a paradox that dividends themselves are fairly stable over time, and their volatilities are order of magnitude
+lower than the volatility of the stock market. This means that dividends forecasts are more stable and accurate than market movement forecasts.
+
+In this application the dividends are assumed to have a random realization represented by a dividend growth multiplier, which means that:
+
+<img src="https://latex.codecogs.com/gif.latex?div_{t+1} = div_t * mult_t * (1 + growth)" />,
+
+where the multiplier is a lognormal random variable with mean of 1 and given standard deviation.
+
+A quick review of the S&P dividends shows standard deviation of annual dividend log-change to be 0.03, so this is the default value provided.
 
 ## Screenshots
 
-![visualization of portfolio evolution](docs/screenshot-0.0.2.png)
+![visualization of portfolio evolution](./docs/screenshot-0.0.2.png)
 
 [CC-BY-NC-SA-4.0](LICENSE.md)
