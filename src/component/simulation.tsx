@@ -342,19 +342,23 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
                   </td>
                 </tr>
                 <tr>
-                  <td>Frequency</td>
+                  <td>Display frequency</td>
                   <td>
-                    <input
-                      type="number"
+                    <select
+                      id="frequency"
+                      datatype="number"
                       value={this.state.displayFreq}
-                      min={1}
-                      max={12}
                       onChange={(ev) =>
                         this.setState({
                           displayFreq: parseInt(ev.target.value),
                         })
                       }
-                    />
+                    >
+                      <option value="1">Monthly</option>
+                      <option value="3">Quarterly</option>
+                      <option value="6">Semi-Annual</option>
+                      <option value="12">Annual</option>
+                    </select>
                   </td>
                 </tr>
                 <tr>
