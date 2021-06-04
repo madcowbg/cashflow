@@ -1,7 +1,6 @@
 import {
   count,
   fmap,
-  Process,
   take,
   constant,
   sample,
@@ -15,7 +14,7 @@ describe("unit", () => {
     let u = constant(5);
     for (const i of _.range(0, 100)) {
       expect(u.v).to.eq(5);
-      u = u.evolve();
+      u = u.evolve;
     }
   });
 });

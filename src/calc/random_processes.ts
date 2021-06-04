@@ -16,27 +16,27 @@ export function random_mean_reverting(
   std: number
 ): Random<Process<number>> {
   return rmap(
-      (driver: Process<number>) =>
-          stateful(
-              (prevNumber: number, residual: number) =>
-                  prevNumber + nu * (ltm - prevNumber) + std * residual
-          )(x_0, driver).evolve() // note: skipping x_0 when we return, as it is not random
+    (driver: Process<number>) =>
+      stateful(
+        (prevNumber: number, residual: number) =>
+          prevNumber + nu * (ltm - prevNumber) + std * residual
+      )(x_0, driver).evolve // note: skipping x_0 when we return, as it is not random
   )(white_noise(0, 1));
 }
 
 export function white_noise(
-    mean: number,
-    stdev: number
+  mean: number,
+  stdev: number
 ): Random<Process<number>> {
   return {
     pick(seed: number) {
       const masterLcg: Process<number> = lcg(seed);
 
       return fmap((stepSeed: number) =>
-          // FIXME this can backfire with quasi-random numbers due to the dimension problem
-          d3.randomNormal.source(d3.randomLcg(stepSeed))(mean, stdev)()
+        // FIXME this can backfire with quasi-random numbers due to the dimension problem
+        d3.randomNormal.source(d3.randomLcg(stepSeed))(mean, stdev)()
       )(masterLcg);
-    }
+    },
   };
 }
 

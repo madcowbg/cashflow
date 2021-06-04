@@ -2,13 +2,13 @@ import * as _ from "lodash";
 
 export interface Process<T> {
   readonly v: T;
-  evolve(): Process<T>;
+  readonly evolve: Process<T>;
 }
 
 export function constant<T>(value: T): Process<T> {
   return {
     v: value,
-    evolve: function () {
+    get evolve(): Process<T> {
       return this;
     },
   };
@@ -45,7 +45,9 @@ export function fmap<R>(
 ): (...args: Process<unknown>[]) => Process<R> {
   const result = (...args: Process<unknown>[]) => ({
     v: transform(...args.map((p: Process<unknown>) => p.v)),
-    evolve: () => result(...args.map((p: Process<unknown>) => p.evolve())),
+    get evolve() {
+      return result(...args.map((p: Process<unknown>) => p.evolve));
+    },
   });
   return result;
 }
@@ -90,11 +92,12 @@ export function stateful<T, S>(
 ): (prev: S, ...process: Process<any>[]) => Process<S> {
   const statefulWithF = (prev: S, ...process: Process<any>[]) => ({
     v: prev,
-    evolve: () =>
-      statefulWithF(
+    get evolve(): Process<S> {
+      return statefulWithF(
         stateF(prev, ...process.map((p) => p.v)),
-        ...process.map((p) => p.evolve())
-      ),
+        ...process.map((p) => p.evolve)
+      );
+    },
   });
   return statefulWithF;
 }
@@ -104,7 +107,7 @@ export function take(num: number): <V>(p: Process<V>) => V[] {
     const res: V[] = [];
     for (let i = 0; i < num; i++) {
       res.push(p.v);
-      p = p.evolve();
+      p = p.evolve;
     }
     return res;
   };
@@ -125,7 +128,7 @@ export function aggregate<A>(
     const args = [];
     for (let i = 0; i < frequency; i++) {
       args.push(pa.v);
-      pa = pa.evolve();
+      pa = pa.evolve;
     }
     return [pa, args];
   }
@@ -133,7 +136,9 @@ export function aggregate<A>(
     const [evolvedPA, elementsInbetween] = skip(pa);
     return {
       v: agg(...elementsInbetween),
-      evolve: () => sampler(evolvedPA),
+      get evolve() {
+        return sampler(evolvedPA);
+      },
     };
   };
   return sampler;

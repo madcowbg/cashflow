@@ -294,7 +294,7 @@ export function investOverTime(
     savings: SavingsParams
   ) => InvestmentDecision
 ): Process<InvestmentOutcome> {
-  const futureSecurityProcess = securityProcess.evolve();
+  const futureSecurityProcess = securityProcess.evolve;
   type State = {
     t: number;
     currentPosition: Position;
@@ -328,7 +328,7 @@ export function investOverTime(
     savingsProcess,
     futureSecurityProcess
   );
-  return fmap((s: State) => s.outcome)(stateP.evolve());
+  return fmap((s: State) => s.outcome)(stateP.evolve);
 }
 
 export interface MarketSentiment {
