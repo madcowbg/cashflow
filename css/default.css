@@ -1,12 +1,14 @@
-#preferences {
+.preferences-group {
     padding: 3px;
     background-color: lightgray;
     border-style: solid;
     border-width: thin;
     border-color: black;
+    width: max-content;
+    float:left;
 }
 
-#preferences div {
+.preferences-box {
     padding: 3px;
     margin: 2px;
     background-color: lightgray;
@@ -31,6 +33,24 @@ p {
 }
 
 .standard-chart {
-    width: 500px;
-    height: 350px;
+    width: 600px;
+    height: 400px;
+}
+
+.chart-box {
+    border: dotted;
+    width: max-content;
+    background-color: #f5f5f5;
+    padding: 2px;
+    margin: 2pt;
+    border-width: thin;
+    float:left;
+}
+
+#simulations, #selected-trajectory {
+    float: left
+}
+
+#details-table {
+    float: right
 }

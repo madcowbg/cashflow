@@ -28,7 +28,7 @@ export class EconometricInputComponent extends React.Component<
 
   render(): JSX.Element {
     return (
-      <div id="preferences-econometric">
+      <div id="preferences-econometric" className="preferences-box">
         <p className="preferences-head">Econometric preferences</p>
         <table>
           {/*<thead>*/}

@@ -266,48 +266,109 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     const sims = this.calculateSims();
     return (
       <div>
-        <div id="preferences">
-          <div id="preferences-investement">
-            <p className="preferences-head">Investment preferences</p>
-            <table>
-              <tbody>
-                <tr>
-                  <td className="prop-name-cell">Initial investment size</td>
-                  <td>
-                    <input
-                      type="number"
-                      value={this.state.startingPV}
-                      onChange={(e) =>
-                        this.onChangeStartingPV(parseFloat(e.target.value))
-                      }
-                    />
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+        <div id="simulations">
+          <div id="preferences" className="preferences-group">
+            <div id="preferences-investement" className="preferences-box">
+              <p className="preferences-head">Investment preferences</p>
+              <table>
+                <tbody>
+                  <tr>
+                    <td className="prop-name-cell">Initial investment size</td>
+                    <td>
+                      <input
+                        type="number"
+                        value={this.state.startingPV}
+                        onChange={(e) =>
+                          this.onChangeStartingPV(parseFloat(e.target.value))
+                        }
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <EconometricInputComponent
+              data={this.state.params}
+              onChange={(data) => this.onParamsChange(data)}
+            />
+            <SavingsParametersInput
+              data={this.state.savings}
+              onChange={(data: SavingsParams) => this.onSavingsChange(data)}
+            />
           </div>
-          <EconometricInputComponent
-            data={this.state.params}
-            onChange={(data) => this.onParamsChange(data)}
-          />
-          <SavingsParametersInput
-            data={this.state.savings}
-            onChange={(data: SavingsParams) => this.onSavingsChange(data)}
-          />
-          <div id="preferences-simulation">
-            <p className="preferences-head">Simulation preferences</p>
+          <div className="chart-box">
+            <div id="preferences-simulation" className="preferences-box">
+              <p className="preferences-head">Simulation preferences</p>
+              <table>
+                <tbody>
+                  <tr>
+                    <td className="prop-name-cell"># sims</td>
+                    <td>
+                      <input
+                        type="number"
+                        value={this.state.numSims}
+                        min={1}
+                        max={5000}
+                        onChange={(ev) =>
+                          this.setState({ numSims: parseInt(ev.target.value) })
+                        }
+                      />
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </div>
+            <div className="standard-chart">
+              {this.simsChart(sims.monthsIdx, sims.trajectoryDatasets)},
+            </div>
+          </div>
+        </div>
+        <div id="selected-trajectory">
+          <div id="preferences-trajectory" className="preferences-box">
             <table>
               <tbody>
                 <tr>
-                  <td className="prop-name-cell"># sims</td>
+                  <td className="prop-name-cell">Sim index</td>
                   <td>
                     <input
                       type="number"
-                      value={this.state.numSims}
-                      min={1}
-                      max={5000}
+                      value={this.state.simIndex}
+                      min={0}
+                      max={this.state.numSims - 1}
                       onChange={(ev) =>
-                        this.setState({ numSims: parseInt(ev.target.value) })
+                        this.setState({ simIndex: parseInt(ev.target.value) })
+                      }
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td>Frequency</td>
+                  <td>
+                    <input
+                      type="number"
+                      value={this.state.displayFreq}
+                      min={1}
+                      max={12}
+                      onChange={(ev) =>
+                        this.setState({
+                          displayFreq: parseInt(ev.target.value),
+                        })
+                      }
+                    />
+                  </td>
+                </tr>
+                <tr>
+                  <td>Period in Years</td>
+                  <td>
+                    <input
+                      type="number"
+                      value={this.state.displayPeriodYears}
+                      min={2}
+                      max={100}
+                      onChange={(ev) =>
+                        this.setState({
+                          displayPeriodYears: parseInt(ev.target.value),
+                        })
                       }
                     />
                   </td>
@@ -315,86 +376,51 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
               </tbody>
             </table>
           </div>
-        </div>
-        <div className="standard-chart">
-          {this.simsChart(sims.monthsIdx, sims.trajectoryDatasets)},
-        </div>
-        <div>
-          <p>
-            Sim index:{" "}
-            <input
-              type="number"
-              value={this.state.simIndex}
-              min={0}
-              max={this.state.numSims - 1}
-              onChange={(ev) =>
-                this.setState({ simIndex: parseInt(ev.target.value) })
-              }
-            />
-          </p>
-          <p>
-            Frequency:{" "}
-            <input
-              type="number"
-              value={this.state.displayFreq}
-              min={1}
-              max={12}
-              onChange={(ev) =>
-                this.setState({ displayFreq: parseInt(ev.target.value) })
-              }
-            />
-          </p>
-          <p>
-            Period in Years:{" "}
-            <input
-              type="number"
-              value={this.state.displayPeriodYears}
-              min={2}
-              max={100}
-              onChange={(ev) =>
-                this.setState({ displayPeriodYears: parseInt(ev.target.value) })
-              }
-            />
-          </p>
-        </div>
-        <div className="standard-chart">
-          {this.summaryChart(
-            monthsIdx,
-            sentimentDatasets,
-            "Sentiment and yields"
-          )}
-        </div>
-        <div className="standard-chart">
-          {this.summaryChart(monthsIdx, summaryDatasets, "Summary charts")}
-        </div>
-        <div className="standard-chart">
-          {this.gainsChart(
-            monthsIdx,
-            statisticsOverTime,
-            adjustForInflation,
-            "Gains and cashflows"
-          )}
-        </div>
-        <table>
-          <thead>
-            <tr key="title">
-              <th key="month">Period {this.state.displayFreq}-months</th>
-              {summaryDatasets.map((d, idx) => (
-                <th key={idx}>{d.label}</th>
-              ))}
-            </tr>
-          </thead>
-          <tbody>
-            {_.range(0, monthsIdx.length).map((iPeriod) => (
-              <tr key={iPeriod}>
-                <td key="month">{iPeriod}</td>
+          <div className="chart-box">
+            <div className="standard-chart">
+              {this.summaryChart(
+                monthsIdx,
+                sentimentDatasets,
+                "Sentiment and yields"
+              )}
+            </div>
+          </div>
+          <div className="chart-box">
+            <div className="standard-chart">
+              {this.summaryChart(monthsIdx, summaryDatasets, "Summary charts")}
+            </div>
+          </div>
+          <div className="chart-box">
+            <div className="standard-chart">
+              {this.gainsChart(
+                monthsIdx,
+                statisticsOverTime,
+                adjustForInflation,
+                "Gains and cashflows"
+              )}
+            </div>
+          </div>
+          <table id="details-table">
+            <thead>
+              <tr key="title">
+                <th key="month">Period {this.state.displayFreq}-months</th>
                 {summaryDatasets.map((d, idx) => (
-                  <td key={idx}>{d.data[iPeriod]}</td>
+                  <th key={idx}>{d.label}</th>
                 ))}
               </tr>
-            ))}
-          </tbody>
-        </table>
+            </thead>
+            <tbody>
+              {_.range(0, monthsIdx.length).map((iPeriod) => (
+                <tr key={iPeriod}>
+                  <td key="month">{iPeriod}</td>
+                  {summaryDatasets.map((d, idx) => (
+                    <td key={idx}>{d.data[iPeriod]}</td>
+                  ))}
+                </tr>
+              ))}
+            </tbody>
+          </table>
+        </div>
       </div>
     );
   }

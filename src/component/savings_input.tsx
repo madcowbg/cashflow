@@ -18,7 +18,7 @@ export class SavingsParametersInput extends React.Component<
 
   render() {
     return (
-      <div id="preferences-savings">
+      <div id="preferences-savings" className="preferences-box">
         <p className="preferences-head">Savings preferences</p>
         <table>
           <tbody>
