@@ -30,86 +30,119 @@ export class EconometricInputComponent extends React.Component<
     return (
       <div id="preferences-econometric">
         <p className="preferences-head">Econometric preferences</p>
-        <p>
-          Current dividend yield (%){" "}
-          <input
-            type="number"
-            onChange={(e) =>
-              this.handleChange({
-                currentDividendYield: parseFloat(e.target.value) / 100,
-              })
-            }
-            value={this.state.currentDividendYield * 100}
-          />
-        </p>
-        <p>
-          Real dividend growth p.a. (%){" "}
-          <input
-            type="number"
-            onChange={(e) =>
-              this.handleChange({
-                realDividendGrowth: parseFloat(e.target.value) / 100,
-              })
-            }
-            value={this.state.realDividendGrowth * 100}
-          />
-        </p>
-        <p>
-          Dividend realization factor standard deviation:
-          <input
-            type="number"
-            value={this.state.realizedDividendAnnualStandardDeviation * 100}
-            onChange={(e) =>
-              this.handleChange({
-                realizedDividendAnnualStandardDeviation:
-                  parseFloat(e.target.value) / 100,
-              })
-            }
-          />
-        </p>
-        <p>
-          Inflation (%):{" "}
-          <input
-            type="number"
-            onChange={(e) =>
-              this.handleChange({ inflation: parseFloat(e.target.value) / 100 })
-            }
-            value={this.state.inflation * 100}
-          />
-          <input
-            type="checkbox"
-            onChange={(e) => {
-              this.handleChange({
-                adjustForInflation: e.target.checked,
-              });
-            }}
-            checked={this.state.adjustForInflation}
-          />
-          Show inflation-adjusted ($)
-        </p>
-        <p>
-          Discount Rate p.a. (%){" "}
-          <input
-            type="number"
-            onChange={(e) =>
-              this.handleChange({
-                discountRate: parseFloat(e.target.value) / 100,
-              })
-            }
-            value={this.state.discountRate * 100}
-          />
-          Market price of $100 investment{" "}
-          <input
-            type="number"
-            onChange={(e) =>
-              this.handleChange({
-                marketPriceOf100DollarInvestment: parseFloat(e.target.value),
-              })
-            }
-            disabled={true}
-            value={this.state.marketPriceOf100DollarInvestment}
-          />
-        </p>
+        <table>
+          {/*<thead>*/}
+          {/*<tr key="title">*/}
+          {/*    <th key="month"></th>*/}
+          {/*</tr>*/}
+          {/*</thead>*/}
+          <tbody>
+            <tr>
+              <td className="prop-name-cell">Current dividend yield (%)</td>
+              <td>
+                <input
+                  type="number"
+                  onChange={(e) =>
+                    this.handleChange({
+                      currentDividendYield: parseFloat(e.target.value) / 100,
+                    })
+                  }
+                  value={this.state.currentDividendYield * 100}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Real dividend growth p.a. (%)</td>
+              <td>
+                <input
+                  type="number"
+                  onChange={(e) =>
+                    this.handleChange({
+                      realDividendGrowth: parseFloat(e.target.value) / 100,
+                    })
+                  }
+                  value={this.state.realDividendGrowth * 100}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Dividend realization factor standard deviation</td>
+              <td>
+                <input
+                  type="number"
+                  value={
+                    this.state.realizedDividendAnnualStandardDeviation * 100
+                  }
+                  onChange={(e) =>
+                    this.handleChange({
+                      realizedDividendAnnualStandardDeviation:
+                        parseFloat(e.target.value) / 100,
+                    })
+                  }
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Inflation (%)</td>
+              <td>
+                <input
+                  type="number"
+                  onChange={(e) =>
+                    this.handleChange({
+                      inflation: parseFloat(e.target.value) / 100,
+                    })
+                  }
+                  value={this.state.inflation * 100}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Show inflation-adjusted ($)</td>
+              <td>
+                <input
+                  type="checkbox"
+                  onChange={(e) => {
+                    this.handleChange({
+                      adjustForInflation: e.target.checked,
+                    });
+                  }}
+                  checked={this.state.adjustForInflation}
+                />
+              </td>
+            </tr>
+            <tr>
+              <td>Discount Rate p.a. (%)</td>
+              <td>
+                <input
+                  type="number"
+                  onChange={(e) =>
+                    this.handleChange({
+                      discountRate: parseFloat(e.target.value) / 100,
+                    })
+                  }
+                  value={this.state.discountRate * 100}
+                />
+              </td>
+            </tr>{" "}
+            <tr>
+              <td>Market price of $100 investment</td>
+              <td>
+                <input
+                  type="number"
+                  onChange={(e) =>
+                    this.handleChange({
+                      marketPriceOf100DollarInvestment: parseFloat(
+                        e.target.value
+                      ),
+                    })
+                  }
+                  disabled={true}
+                  value={this.state.marketPriceOf100DollarInvestment}
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
         <p>
           <button onClick={() => saveSettings()}>Save settings</button>
         </p>

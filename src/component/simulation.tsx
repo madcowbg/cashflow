@@ -269,16 +269,22 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         <div id="preferences">
           <div id="preferences-investement">
             <p className="preferences-head">Investment preferences</p>
-            <p>
-              Initial investment size:{" "}
-              <input
-                type="number"
-                value={this.state.startingPV}
-                onChange={(e) =>
-                  this.onChangeStartingPV(parseFloat(e.target.value))
-                }
-              />{" "}
-            </p>
+            <table>
+              <tbody>
+                <tr>
+                  <td className="prop-name-cell">Initial investment size</td>
+                  <td>
+                    <input
+                      type="number"
+                      value={this.state.startingPV}
+                      onChange={(e) =>
+                        this.onChangeStartingPV(parseFloat(e.target.value))
+                      }
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
           <EconometricInputComponent
             data={this.state.params}
@@ -290,18 +296,24 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           />
           <div id="preferences-simulation">
             <p className="preferences-head">Simulation preferences</p>
-            <p>
-              # sims:{" "}
-              <input
-                type="number"
-                value={this.state.numSims}
-                min={1}
-                max={5000}
-                onChange={(ev) =>
-                  this.setState({ numSims: parseInt(ev.target.value) })
-                }
-              />
-            </p>
+            <table>
+              <tbody>
+                <tr>
+                  <td className="prop-name-cell"># sims</td>
+                  <td>
+                    <input
+                      type="number"
+                      value={this.state.numSims}
+                      min={1}
+                      max={5000}
+                      onChange={(ev) =>
+                        this.setState({ numSims: parseInt(ev.target.value) })
+                      }
+                    />
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
         {this.simsChart(sims.monthsIdx, sims.trajectoryDatasets)},

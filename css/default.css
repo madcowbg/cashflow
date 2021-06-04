@@ -25,3 +25,7 @@ p {
     background-color: darkgray;
     color: white;
 }
+
+.prop-name-cell {
+    width: 280pt;
+}

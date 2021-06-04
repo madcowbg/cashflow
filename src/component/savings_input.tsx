@@ -20,12 +20,22 @@ export class SavingsParametersInput extends React.Component<
     return (
       <div id="preferences-savings">
         <p className="preferences-head">Savings preferences</p>
-        Monthly investment ($):{" "}
-        <input
-          type="number"
-          value={this.state.monthlyInvestment}
-          onChange={(ev) => this.setSavings(parseFloat(ev.target.value))}
-        />
+        <table>
+          <tbody>
+            <tr>
+              <td className="prop-name-cell">Monthly investment ($)</td>
+              <td>
+                <input
+                  type="number"
+                  value={this.state.monthlyInvestment}
+                  onChange={(ev) =>
+                    this.setSavings(parseFloat(ev.target.value))
+                  }
+                />
+              </td>
+            </tr>
+          </tbody>
+        </table>
       </div>
     );
   }
