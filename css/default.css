@@ -16,11 +16,11 @@
 }
 
 p {
-    margin: 2pt 0pt;
+    margin: 2pt 0;
 }
 
 .preferences-head {
-    margin: 2pt 0px;
+    margin: 2pt 0;
     padding: 2pt;
     background-color: darkgray;
     color: white;
@@ -28,4 +28,9 @@ p {
 
 .prop-name-cell {
     width: 280pt;
+}
+
+.standard-chart {
+    width: 500px;
+    height: 350px;
 }

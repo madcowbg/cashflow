@@ -316,7 +316,9 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
             </table>
           </div>
         </div>
-        {this.simsChart(sims.monthsIdx, sims.trajectoryDatasets)},
+        <div className="standard-chart">
+          {this.simsChart(sims.monthsIdx, sims.trajectoryDatasets)},
+        </div>
         <div>
           <p>
             Sim index:{" "}
@@ -355,9 +357,24 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
             />
           </p>
         </div>
-        {this.summaryChart(monthsIdx, sentimentDatasets)}
-        {this.summaryChart(monthsIdx, summaryDatasets)}
-        {this.gainsChart(monthsIdx, statisticsOverTime, adjustForInflation)}
+        <div className="standard-chart">
+          {this.summaryChart(
+            monthsIdx,
+            sentimentDatasets,
+            "Sentiment and yields"
+          )}
+        </div>
+        <div className="standard-chart">
+          {this.summaryChart(monthsIdx, summaryDatasets, "Summary charts")}
+        </div>
+        <div className="standard-chart">
+          {this.gainsChart(
+            monthsIdx,
+            statisticsOverTime,
+            adjustForInflation,
+            "Gains and cashflows"
+          )}
+        </div>
         <table>
           <thead>
             <tr key="title">
@@ -437,18 +454,24 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     };
   }
 
-  private summaryChart(monthsIdx: number[], summaryDatasets: ChartDataSets[]) {
+  private summaryChart(
+    monthsIdx: number[],
+    summaryDatasets: ChartDataSets[],
+    titleText: string
+  ) {
     return (
       <Line
-        width={800}
-        height={400}
         data={{
           labels: monthsIdx,
           datasets: summaryDatasets,
         }}
         options={{
-          maintainAspectRatio: true,
-          responsive: false,
+          title: {
+            display: true,
+            text: titleText,
+          },
+          maintainAspectRatio: false,
+          responsive: true,
           scales: {
             yAxes: [
               {
@@ -496,12 +519,11 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   private gainsChart(
     monthsIdx: number[],
     statisticsOverTime: Statistics[],
-    adjustForInflation: (vals: number[]) => number[]
+    adjustForInflation: (vals: number[]) => number[],
+    titleText: string
   ) {
     return (
       <Line
-        width={800}
-        height={400}
         data={{
           labels: _.map(monthsIdx, (i) => `month ${i}`),
           datasets: [
@@ -535,8 +557,12 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           ],
         }}
         options={{
-          maintainAspectRatio: true,
-          responsive: false,
+          title: {
+            display: true,
+            text: titleText,
+          },
+          maintainAspectRatio: false,
+          responsive: true,
           scales: {
             yAxes: [
               {
@@ -579,15 +605,13 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   private simsChart(monthsIdx: string[], trajectoryDatasets: ChartDataSets[]) {
     return (
       <Line
-        width={800}
-        height={400}
         data={{
           labels: monthsIdx,
           datasets: trajectoryDatasets,
         }}
         options={{
-          maintainAspectRatio: true,
-          responsive: false,
+          maintainAspectRatio: false,
+          responsive: true,
           legend: { display: false },
           scales: {
             yAxes: [
