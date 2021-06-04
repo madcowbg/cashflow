@@ -1,0 +1,27 @@
+#preferences {
+    padding: 3px;
+    background-color: lightgray;
+    border-style: solid;
+    border-width: thin;
+    border-color: black;
+}
+
+#preferences div {
+    padding: 3px;
+    margin: 2px;
+    background-color: lightgray;
+    border-style: solid;
+    border-width: thin;
+    border-color: black;
+}
+
+p {
+    margin: 2pt 0pt;
+}
+
+.preferences-head {
+    margin: 2pt 0px;
+    padding: 2pt;
+    background-color: darkgray;
+    color: white;
+}

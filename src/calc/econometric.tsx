@@ -28,7 +28,8 @@ export class EconometricInputComponent extends React.Component<
 
   render(): JSX.Element {
     return (
-      <div>
+      <div id="preferences-econometric">
+        <p className="preferences-head">Econometric preferences</p>
         <p>
           Current dividend yield (%){" "}
           <input

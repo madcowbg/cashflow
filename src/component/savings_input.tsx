@@ -18,7 +18,8 @@ export class SavingsParametersInput extends React.Component<
 
   render() {
     return (
-      <div>
+      <div id="preferences-savings">
+        <p className="preferences-head">Savings preferences</p>
         Monthly investment ($):{" "}
         <input
           type="number"
