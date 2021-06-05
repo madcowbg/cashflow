@@ -1,6 +1,6 @@
 {
   "name": "cashflow",
-  "version": "0.0.2",
+  "version": "0.5.0",
   "description": "Analysis of portfolios based on cashflows and Gordon formula",
   "main": "./dist/main.js",
   "scripts": {
