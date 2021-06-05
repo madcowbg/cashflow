@@ -2,6 +2,7 @@
   "name": "cashflow",
   "version": "0.0.2",
   "description": "Analysis of portfolios based on cashflows and Gordon formula",
+  "main": "./dist/main.js",
   "scripts": {
     "build": "tsc",
     "watch": "tsc -w",
@@ -9,7 +10,7 @@
     "start": "npm run build && electron ./dist/main.js",
     "test": "mocha -r ts-node/register 'test/**/*.ts'"
   },
-  "repository": "TODO",
+  "repository": "https://github.com/madcowbg/cashflow",
   "keywords": [
     "cashflow",
     "portfolio",

@@ -1,4 +1,4 @@
-# Cashflow: an Economic Scenario Generator for FIRE
+# Cashflow: an Economic Scenario Generator for Passive Investments
 
 # Manifesto
 
