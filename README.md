@@ -30,14 +30,15 @@ consequently future returns should be low)
 The goal of the application is to provide a convenient way to visualize, analyze and simulate the long-term behavior of
 investment portfolios based on their cashflows.
 
-(TODO rewrite) The Gordon equation provides a fairly accurate trend of the security price over the long term. We also need to consider 
-the long-term market sentiment, which accounts for a portion of the realized long-term return as well - historically 
-markets had demanded a higher stock premium, so the realized return was larger, while in the future they may revert to a 
-different mode and the realized return would consequently be lower.
+(TODO rewrite) The Gordon equation provides a fairly accurate trend of the security price over the long term. We also
+need to consider the long-term market sentiment, which accounts for a portion of the realized long-term return as well -
+historically markets had demanded a higher stock premium, so the realized return was larger, while in the future they
+may revert to a different mode and the realized return would consequently be lower.
 
 ### Gordron Equation
 
-Research shows [TODO cite] that long-term growth fairly closely follows the intrinsic value, which is expressed via the Gordon equation. The Gordon equation implies a long-term equity market return equal to:
+Research shows [TODO cite] that long-term growth fairly closely follows the intrinsic value, which is expressed via the
+Gordon equation. The Gordon equation implies a long-term equity market return equal to:
 
 ![Gordon equation](<https://latex.codecogs.com/gif.latex?mr = cdy + dg + infl>),
 
@@ -46,8 +47,8 @@ realized inflation.
 
 ### Market Sentiment
 
-Note that there is a natural limit imposed on the market return that the participants must ask - it must be smaller 
-than the long-term nominal dividend growth:
+Note that there is a natural limit imposed on the market return that the participants must ask - it must be smaller than
+the long-term nominal dividend growth:
 
 ![market return min](<https://latex.codecogs.com/gif.latex?mr_t \geq dg + infl>)
 
@@ -55,12 +56,13 @@ If that is broken, any market price can be justified.
 
 The market sentiment - represented by the log-change of the required market return - is a mean-reverting process:
 
-![market return equation](<https://latex.codecogs.com/gif.latex?\textrm{TODO check def} lmr_{t+1} = beta * (x_0 - lmr_t) + lmr^{res}_{t+1}>),
+![market return equation](<https://latex.codecogs.com/gif.latex?\textrm{TODO check def} lmr_{t+1} = beta * (x_0 - lmr_t) + lmr^{res}_{t+1}>)
+,
 
 where TODO describe vars
 
-We impose the limit imposed on the market sentiment by the Gordon equation by just allowing the randomization of the part
-of the market return above the minimum limit.
+We impose the limit imposed on the market sentiment by the Gordon equation by just allowing the randomization of the
+part of the market return above the minimum limit.
 
 ## Dividends
 
@@ -77,8 +79,8 @@ growth multiplier, showing:
 
 ![dividend yield evolution](<https://latex.codecogs.com/gif.latex?div_{t+1} = div_t \times (1 + dg) \times rdgr_t>),
 
-where ![realized dividend growth ratio](<https://latex.codecogs.com/gif.latex?rdgr_{t+1} \sim log-N \left( 0, \sigma_{rdgr} \right) >),
-i.e. the multiplier is a lognormal random variable with mean of 1 and given standard deviation.
+where ![realized dividend growth ratio](<https://latex.codecogs.com/gif.latex?rdgr_{t+1} \sim log-N \left( 0, \sigma_{rdgr} \right) >)
+, i.e. the multiplier is a lognormal random variable with mean of 1 and given standard deviation.
 
 Our assumption is that the current dividend amount is pretty stable - it grows as a white noise with small volatility.
 
@@ -86,17 +88,24 @@ A quick review of the S&P dividends in 2014-2021 (TODO this is too short and may
 the analysis with more data) shows standard deviation of annual dividend log-change to be 0.03, so this is the default
 value provided, the portfolio value with different random realizations is still pretty compactly distributed:
 
-![visualization of portfolio evolution](./docs/stdev-0.03.png)
+![spread of simulations with sigma = 0.03](./docs/stdev-0.03.png)
 
 If instead we assumed higher (quite unrealistic) volatility of actual realized dividends, the chart produces much bigger
 difference between realizations:
 
-![visualization of portfolio evolution](./docs/stdev-0.1.PNG)
+![spread of simulations with sigma = 0.1](./docs/stdev-0.1.PNG)
 
 This is similar to what simply the simulation of independent random market returns will produce.
 
-## Screenshots
+## Usage
 
-![visualization of portfolio evolution](./docs/screenshot-0.0.2.PNG)
+The first part of the application shows all the necessary settings to run simulations. The present value of each
+simulation for each end of year is shown in a common chart.
+![basic prefs and simulations chart](./docs/basic-prefs-and-sims.PNG)
+
+We can explore individual simulations by choosing the index. A sleuth of useful metrics is provided.
+![single trajectory charts](./docs/single-trajectory-exploration.PNG)
+The trajectories can be aggregated on different frequencies, but the simulation is always computed on a monthly basis
+and then aggregated as necessary.
 
 [CC-BY-NC-SA-4.0](LICENSE.md)
