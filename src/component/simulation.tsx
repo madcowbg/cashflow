@@ -156,51 +156,13 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       adjustForInflation,
     } = this.calculateInvestmentDatasets();
 
-    const summaryDatasets: ChartDataSets[] = [
-      {
-        label: "Theoretic Fully Rebalanced Investment Value ($)",
-        data: this.formatDollar(
-          adjustForInflation(
-            theoreticInvestmentValue(
-              this.state.startingPV,
-              this.state.params,
-              initialSecurity,
-              100,
-              monthsIdx
-            )
-          )
-        ),
-        yAxisID: "$",
-      },
-      {
-        label: "Num shares",
-        data: this.formatDollar(
-          adjustForInflation(_.map(statisticsOverTime, (s) => s.numberOfShares))
-        ),
-        yAxisID: "#",
-      },
-      {
-        label: "Num bought shares",
-        data: this.formatDollar(
-          adjustForInflation(
-            _.map(statisticsOverTime, (s) => s.totalBoughtNumShares)
-          )
-        ),
-        yAxisID: "#",
-      },
+    const investmentSummary: ChartDataSets[] = [
       {
         label: "Investment Current Market Price ($)",
         data: this.formatDollar(
           adjustForInflation(_.map(statisticsOverTime, (s) => s.fv))
         ),
         yAxisID: "$",
-      },
-      {
-        label: "Dividends ($)",
-        data: this.formatDollar(
-          adjustForInflation(_.map(statisticsOverTime, (s) => s.totalDividends))
-        ),
-        yAxisID: "$ small",
       },
       {
         label: "Total Bought ($)",
@@ -220,6 +182,50 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         ),
         yAxisID: "$ small",
       },
+      {
+        label: "Theoretic Fully Rebalanced Investment Value ($) [FIXME]",
+        data: this.formatDollar(
+          adjustForInflation(
+            theoreticInvestmentValue(
+              this.state.startingPV,
+              this.state.params,
+              initialSecurity,
+              100,
+              monthsIdx
+            )
+          )
+        ),
+        hidden: true,
+        yAxisID: "$",
+      },
+    ];
+
+    const miscSummaryDatasets: ChartDataSets[] = [
+      {
+        label: "Num shares",
+        data: this.formatDollar(
+          adjustForInflation(_.map(statisticsOverTime, (s) => s.numberOfShares))
+        ),
+        yAxisID: "#",
+      },
+      {
+        label: "Num bought shares",
+        data: this.formatDollar(
+          adjustForInflation(
+            _.map(statisticsOverTime, (s) => s.totalBoughtNumShares)
+          )
+        ),
+        yAxisID: "#",
+      },
+
+      {
+        label: "Dividends ($)",
+        data: this.formatDollar(
+          adjustForInflation(_.map(statisticsOverTime, (s) => s.totalDividends))
+        ),
+        yAxisID: "$ small",
+      },
+
       {
         label: "Realized Dividend Yield (%)",
         data: this.formatPercent(
@@ -391,7 +397,20 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           </div>
           <div className="chart-box">
             <div className="standard-chart">
-              {this.summaryChart(monthsIdx, summaryDatasets, "Summary charts")}
+              {this.summaryChart(
+                monthsIdx,
+                investmentSummary,
+                "Investment value and cashflows"
+              )}
+            </div>
+          </div>
+          <div className="chart-box">
+            <div className="standard-chart">
+              {this.summaryChart(
+                monthsIdx,
+                miscSummaryDatasets,
+                "Other charts"
+              )}
             </div>
           </div>
           <div className="chart-box">
@@ -408,7 +427,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
             <thead>
               <tr key="title">
                 <th key="month">Period {this.state.displayFreq}-months</th>
-                {summaryDatasets.map((d, idx) => (
+                {miscSummaryDatasets.map((d, idx) => (
                   <th key={idx}>{d.label}</th>
                 ))}
               </tr>
@@ -417,7 +436,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
               {_.range(0, monthsIdx.length).map((iPeriod) => (
                 <tr key={iPeriod}>
                   <td key="month">{iPeriod}</td>
-                  {summaryDatasets.map((d, idx) => (
+                  {miscSummaryDatasets.map((d, idx) => (
                     <td key={idx}>{d.data[iPeriod]}</td>
                   ))}
                 </tr>

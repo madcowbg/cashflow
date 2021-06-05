@@ -31,11 +31,6 @@ export class EconometricInputComponent extends React.Component<
       <div id="preferences-econometric" className="preferences-box">
         <p className="preferences-head">Econometric preferences</p>
         <table>
-          {/*<thead>*/}
-          {/*<tr key="title">*/}
-          {/*    <th key="month"></th>*/}
-          {/*</tr>*/}
-          {/*</thead>*/}
           <tbody>
             <tr>
               <td className="prop-name-cell">Current dividend yield (%)</td>
@@ -123,7 +118,7 @@ export class EconometricInputComponent extends React.Component<
                   value={this.state.discountRate * 100}
                 />
               </td>
-            </tr>{" "}
+            </tr>
             <tr>
               <td>Market price of $100 investment</td>
               <td>
