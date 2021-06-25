@@ -9,17 +9,24 @@ export type Random<A> = {
   pick(seed: number): A;
 };
 
+/**
+ *
+ * @param x_0 the current level of the process
+ * @param ltm the long-term mean of the process
+ * @param nu the mean-reversion strength parameter
+ * @param std_resid the standard deviation of the residual
+ */
 export function random_mean_reverting(
   x_0: number,
   ltm: number,
   nu: number,
-  std: number
+  std_resid: number
 ): Random<Process<number>> {
   return rmap(
     (driver: Process<number>) =>
       stateful(
         (prevNumber: number, residual: number) =>
-          prevNumber + nu * (ltm - prevNumber) + std * residual
+          prevNumber + nu * (ltm - prevNumber) + std_resid * residual
       )(x_0, driver).evolve // note: skipping x_0 when we return, as it is not random
   )(white_noise(0, 1));
 }

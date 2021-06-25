@@ -49,7 +49,7 @@ export interface Outcome {
   decision: InvestmentDecision;
 }
 
-export function dividendGrowth(
+export function nominalDividendGrowth(
   security: Security,
   economy: MarketParams
 ): number {
@@ -156,14 +156,11 @@ export function currentYield(vehicle: Security, currentPrice: number) {
 
 export function impliedSentiment(
   vehicle: Security,
-  currentPrice: number,
-  economy: MarketParams
+  currentPrice: number
 ): MarketSentiment {
   return {
     discountRate:
-      currentYield(vehicle, currentPrice) +
-      vehicle.realDividendGrowth +
-      economy.inflation,
+      currentYield(vehicle, currentPrice) + vehicle.realDividendGrowth,
   };
 }
 
@@ -283,9 +280,9 @@ function computeInvestmentsAtTime(
 
 export function investOverTime(
   startTime: number,
+  savingsProcess: Process<SavingsParams>,
   securityProcess: Process<SecurityAtTime>,
   initialInvestment: Position,
-  savingsProcess: Process<SavingsParams>,
   strategy: (
     time: number,
     futurePrice: number,
@@ -344,7 +341,7 @@ export function evolveSecurity(
     currentAnnualDividends:
       realizedDividendRatio *
       vehicle.currentAnnualDividends *
-      (1 + dividendGrowth(vehicle, economy) / 12),
+      Math.pow(1 + nominalDividendGrowth(vehicle, economy), 1.0 / 12),
     realDividendGrowth: vehicle.realDividendGrowth,
   };
 }
@@ -354,21 +351,18 @@ export function defaultRevertingSentiment(
   minDiscountRate: number,
   initialSentiment: MarketSentiment
 ): Random<Process<MarketSentiment>> {
-  const optionalDR = initialSentiment.discountRate - minDiscountRate;
   return {
     pick(seed: number) {
-      const sentiment_optional_logchange = random_mean_reverting(
-        0,
-        0,
+      const sentiment_value_above_min = random_mean_reverting(
+        initialSentiment.discountRate,
+        initialSentiment.discountRate,
         0.1,
-        0.8 / 12
+        0.001304846
       ).pick(seed);
 
-      return fmap((sentiment_diff_loglevel_value: number) => ({
-        discountRate:
-          minDiscountRate +
-          optionalDR * Math.exp(sentiment_diff_loglevel_value),
-      }))(sentiment_optional_logchange);
+      return fmap((sentiment_value: number) => ({
+        discountRate: sentiment_value,
+      }))(sentiment_value_above_min);
     },
   };
 }
@@ -381,7 +375,7 @@ export function priceDDM(
   return priceViaGordonEquation(
     security.currentAnnualDividends,
     sentiment.discountRate,
-    dividendGrowth(security, economy)
+    security.realDividendGrowth
   );
 }
 
@@ -409,6 +403,9 @@ export interface DividendParams {
   realizedDividendAnnualStandardDeviation: number; // as percentage of current dividend level
 }
 
+const SENTIMENT_SEED = 0;
+const REALIZATION_DIVIDEND_RATIO_SEED = 5123;
+
 export function savingsTrajectory(
   startingPV: number,
   marketParams: MarketParams,
@@ -433,11 +430,7 @@ export function savingsTrajectory(
     numberOfShares: startingPV / initialInvestmentPrice,
   };
 
-  const initialSentiment = impliedSentiment(
-    initialInvestmentVehicle,
-    100,
-    marketParams
-  );
+  const initialSentiment = impliedSentiment(initialInvestmentVehicle, 100);
 
   return {
     initialInvestmentVehicle,
@@ -445,13 +438,10 @@ export function savingsTrajectory(
       pick(seed: number) {
         const sentiment = defaultRevertingSentiment(
           marketParams,
-          dividendGrowth(initialInvestmentVehicle, marketParams),
+          initialInvestmentVehicle.realDividendGrowth,
           initialSentiment
-        ).pick(seed);
+        ).pick(SENTIMENT_SEED + seed);
 
-        const savings = inflationAdjustedSavings(marketParams, savingsParams);
-
-        const REALIZATION_DIVIDEND_RATIO_SEED = 5123;
         const realizedDividendRatio = defaultRealizedDividendRatio(
           dividendParams
         ).pick(REALIZATION_DIVIDEND_RATIO_SEED + seed);
@@ -464,11 +454,13 @@ export function savingsTrajectory(
           0
         );
 
+        const savings = inflationAdjustedSavings(marketParams, savingsParams);
+
         const investments: Process<InvestmentOutcome> = investOverTime(
           0,
+          savings,
           securityAtTimes,
           initialInvestment,
-          savings,
           fullReinvestmentStrategy
         );
         return { sentiment, investments };

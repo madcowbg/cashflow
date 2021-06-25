@@ -3,7 +3,7 @@ import {
   calculateStatistics,
   consolidateInvestment,
   currentYield,
-  dividendGrowth,
+  nominalDividendGrowth,
   evaluateSecurity,
   evolveSecurity,
   fullReinvestmentStrategy,
@@ -30,7 +30,7 @@ describe("ESG", () => {
     realDividendGrowth: 0.003,
   };
   it("should compute nominal dividend growth as sum of real plus inflation", () => {
-    expect(dividendGrowth(investmentSecurity, params)).to.approximately(
+    expect(nominalDividendGrowth(investmentSecurity, params)).to.approximately(
       0.023,
       1e-10
     );
@@ -96,7 +96,7 @@ describe("ESG", () => {
   });
 
   it("should have investOneMoreTime produce a particular result", () => {
-    const sentiment = impliedSentiment(investmentVehicle, 200, params);
+    const sentiment = impliedSentiment(investmentVehicle, 200);
     const securityAtTime = evaluateSecurity(
       params,
       investmentVehicle,
@@ -106,9 +106,9 @@ describe("ESG", () => {
     );
     const result = investOverTime(
       0,
+      inflationAdjustedSavings(params, savingsParams),
       securityAtTime,
       investment,
-      inflationAdjustedSavings(params, savingsParams),
       fullReinvestmentStrategy
     );
     expect(_.assign({}, result, { evolve: "ignored" })).to.be.deep.eq({
@@ -119,28 +119,28 @@ describe("ESG", () => {
             time: 0,
             transactions: [
               {
-                bought: 0.024952174997920656,
+                bought: 0.024952670926261897,
                 cost: 5,
               },
               { dividend: 5 },
               {
-                bought: 4.9904349995841315,
+                bought: 4.990534185252379,
                 cost: 1000,
               },
             ],
           },
-          investment: { numberOfShares: 8.015387174582052 },
+          investment: { numberOfShares: 8.01548685617864 },
         },
         statistics: {
-          fv: 1606.15,
-          numberOfShares: 8.015387174582052,
-          totalBoughtNumShares: 5.015387174582052,
+          fv: 1606.138052288141,
+          numberOfShares: 8.01548685617864,
+          totalBoughtNumShares: 5.015486856178641,
           totalBoughtDollar: 1005,
           totalDividends: 5,
           externalCashflow: 1000,
         },
         evolvedVehicle: {
-          currentAnnualDividends: 20.03833333333333,
+          currentAnnualDividends: 20.037935076271367,
           realDividendGrowth: 0.003,
         },
       },
@@ -233,8 +233,8 @@ describe("ESG", () => {
   };
   describe("evolveMarket", () => {
     it("should have implied sentiment a particular value", () => {
-      expect(impliedSentiment(security, 10, params)).to.deep.eq({
-        discountRate: 0.12300000000000001,
+      expect(impliedSentiment(security, 10)).to.deep.eq({
+        discountRate: 0.10300000000000001,
       });
     });
 
@@ -242,7 +242,7 @@ describe("ESG", () => {
       const newSecurity = evolveSecurity(params, security, 1);
 
       expect(newSecurity).to.deep.eq({
-        currentAnnualDividends: 1.0019166666666666,
+        currentAnnualDividends: 1.0018967538135684,
         realDividendGrowth: 0.003,
       });
     });
@@ -251,15 +251,15 @@ describe("ESG", () => {
       const newSecurity = evolveSecurity(params, security, 1);
 
       expect(newSecurity).to.deep.eq({
-        currentAnnualDividends: 1.0019166666666666,
+        currentAnnualDividends: 1.0018967538135684,
         realDividendGrowth: 0.003,
       });
 
       const sentiment: MarketSentiment = { discountRate: 0.055 };
       const newPrice = priceDDM(security, params, sentiment);
-      expect(newPrice).to.approximately(31.25, 1e-10);
+      expect(newPrice).to.approximately(19.23076923076923, 1e-10);
       expect(currentYield(newSecurity, newPrice)).to.approximately(
-        0.0320613333333,
+        0.05209863119830556,
         1e-10
       );
     });
