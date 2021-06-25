@@ -28,8 +28,8 @@ import {
 import { aggregateIO, investmentProcess } from "../calc/esg/aggregation";
 
 class ESGProps {
-  params: EconomicParams;
-  savings: SavingsParams;
+  initialState: ESGState;
+  onRender: (state: ESGState) => void;
 }
 
 class ESGState {
@@ -116,23 +116,17 @@ function seedForSimIndex(i: number): number {
 }
 
 export class ESGSimulation extends React.Component<ESGProps, ESGState> {
+  private readonly onRender: (state: ESGState) => void;
+
   constructor(props: ESGProps) {
     super(props);
-    this.state = {
-      params: props.params,
-      startingPV: 250000,
-      savings: props.savings,
-      displayFreq: 1,
-      displayPeriodYears: 20,
-      numSims: 19,
-      simIndex: 18,
-    };
+    this.onRender = props.onRender;
+    this.state = props.initialState;
   }
   readonly formatDollar = formatFloat(1);
   readonly formatPercent = formatFloat(3);
 
   private onParamsChange(params: EconomicParams) {
-    console.log(`changed params: ${JSON.stringify(params)}`);
     this.setState({ params: params });
   }
 
@@ -145,6 +139,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   }
 
   render() {
+    this.onRender(this.state);
     const {
       investmentOverTime,
       investmentVehicleOverTime,

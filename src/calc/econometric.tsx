@@ -138,9 +138,6 @@ export class EconometricInputComponent extends React.Component<
             </tr>
           </tbody>
         </table>
-        <p>
-          <button onClick={() => saveSettings()}>Save settings</button>
-        </p>
       </div>
     );
   }

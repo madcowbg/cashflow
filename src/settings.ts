@@ -1,27 +1,21 @@
 import * as fs from "fs";
 import * as _ from "lodash";
 
-export interface AppSettings {
-  mean: number;
-  std: number;
-}
-
 export const settingsFilename = "settings.json";
 
-export function saveSettings(): void {
-  console.log(`Saving settings! ${JSON.stringify(appSettings)}`);
-  fs.writeFileSync(settingsFilename, JSON.stringify(appSettings), {
+export function saveSettings<T>(settings: T): void {
+  fs.writeFileSync(settingsFilename, JSON.stringify(settings), {
     encoding: "UTF8",
   });
 }
 
-let loadedSettings: AppSettings;
-try {
-  const fileData = fs.readFileSync(settingsFilename, { encoding: "UTF8" });
-  loadedSettings = JSON.parse(fileData);
-} catch {
-  loadedSettings = {} as AppSettings;
+export function storedSettings<T>(defaults: T): T {
+  let loadedSettings: T;
+  try {
+    const fileData = fs.readFileSync(settingsFilename, { encoding: "UTF8" });
+    loadedSettings = JSON.parse(fileData);
+  } catch {
+    loadedSettings = {} as T;
+  }
+  return _.defaultsDeep(loadedSettings, defaults);
 }
-
-const defaults = { mean: 0.0, std: 0.2 };
-export const appSettings = _.defaults(loadedSettings, defaults);
