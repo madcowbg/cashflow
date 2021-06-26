@@ -30,22 +30,24 @@ export function random_mean_reverting(
   )(white_noise(0, 1));
 }
 
-function randomNormal(seed: number, mu: number, sigma: number): number {
+function randomNormal(mu: number, sigma: number): (seed: number) => number {
   let x: number, r: number, y: number;
 
   mu = mu == null ? 0 : +mu;
   sigma = sigma == null ? 1 : +sigma;
 
-  let source = lcg(seed);
-  do {
-    x = source.v * 2 - 1;
-    source = source.evolve;
-    y = source.v * 2 - 1;
-    source = source.evolve;
-    r = x * x + y * y;
-  } while (!r || r > 1);
+  return (seed: number) => {
+    let source = lcg(seed);
+    do {
+      x = source.v * 2 - 1;
+      source = source.evolve;
+      y = source.v * 2 - 1;
+      source = source.evolve;
+      r = x * x + y * y;
+    } while (!r || r > 1);
 
-  return mu + sigma * y * Math.sqrt((-2 * Math.log(r)) / r);
+    return mu + sigma * y * Math.sqrt((-2 * Math.log(r)) / r);
+  };
 }
 
 export function white_noise(
@@ -56,10 +58,8 @@ export function white_noise(
     pick(seed: number) {
       const masterLcg: Process<number> = lcg(seed);
 
-      return fmap((stepSeed: number) =>
-        // FIXME this can backfire with quasi-random numbers due to the dimension problem
-        randomNormal(stepSeed, mean, stdev)
-      )(masterLcg);
+      // FIXME this can backfire with quasi-random numbers due to the dimension problem
+      return fmap(randomNormal(mean, stdev))(masterLcg);
     },
   };
 }
