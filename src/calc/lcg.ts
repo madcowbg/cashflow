@@ -16,5 +16,5 @@ export function lcg(seed = Math.random()): Process<number> {
       state: (0 <= seed && seed < 1 ? seed / eps : Math.abs(seed)) | 0,
       rnd: NaN,
     })
-  );
+  ).evolve; // the first is not part of the series
 }

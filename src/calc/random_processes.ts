@@ -1,7 +1,6 @@
 // Maximum likelihood estimation of mean reverting processes
 // http://www.investmentscience.com/Content/howtoArticles/MLE_for_OR_mean_reverting.pdf
 
-import * as d3 from "d3-random";
 import { fmap, Process, stateful } from "./processes";
 import { lcg } from "./lcg";
 
@@ -31,6 +30,24 @@ export function random_mean_reverting(
   )(white_noise(0, 1));
 }
 
+function randomNormal(seed: number, mu: number, sigma: number): number {
+  let x: number, r: number, y: number;
+
+  mu = mu == null ? 0 : +mu;
+  sigma = sigma == null ? 1 : +sigma;
+
+  let source = lcg(seed);
+  do {
+    x = source.v * 2 - 1;
+    source = source.evolve;
+    y = source.v * 2 - 1;
+    source = source.evolve;
+    r = x * x + y * y;
+  } while (!r || r > 1);
+
+  return mu + sigma * y * Math.sqrt((-2 * Math.log(r)) / r);
+}
+
 export function white_noise(
   mean: number,
   stdev: number
@@ -41,7 +58,7 @@ export function white_noise(
 
       return fmap((stepSeed: number) =>
         // FIXME this can backfire with quasi-random numbers due to the dimension problem
-        d3.randomNormal.source(d3.randomLcg(stepSeed))(mean, stdev)()
+        randomNormal(stepSeed, mean, stdev)
       )(masterLcg);
     },
   };

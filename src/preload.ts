@@ -32,9 +32,7 @@ window.addEventListener("DOMContentLoaded", () => {
   ReactDOM.render(
     React.createElement(ESGSimulation, {
       initialState: storedSettings(defaults),
-      onRender(state) {
-        saveSettings(state);
-      },
+      onRender: saveSettings,
     }),
     document.getElementById("portfolio-simulation")
   );
