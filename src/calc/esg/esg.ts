@@ -221,7 +221,10 @@ export function diff(
   );
 }
 
-function pricePositions(portfolio: Portfolio, securityAtTplus1: Pricing) {
+export function pricePositions(
+  portfolio: Portfolio,
+  securityAtTplus1: Pricing
+) {
   return _.mapValues(
     portfolio,
     (pos, id) => securityAtTplus1[id].price * pos.numberOfShares

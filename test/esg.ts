@@ -19,6 +19,7 @@ import {
   Pricing,
   toTrades,
   diff,
+  pricePositions,
 } from "../src/calc/esg/esg";
 import _ = require("lodash");
 import { constant, fmap } from "../src/calc/processes";
@@ -258,5 +259,44 @@ describe("ESG", () => {
         1e-10
       );
     });
+  });
+});
+
+describe("fullRebalancing", () => {
+  it("should produce a particular value", function () {
+    const equity: Security = {
+      currentAnnualDividends: 1,
+      realDividendGrowth: 2,
+    };
+    const cash: Security = {
+      currentAnnualDividends: 0,
+      realDividendGrowth: 0,
+    };
+    const portfolio = {
+      equity: { numberOfShares: 3 },
+      cash: { numberOfShares: 1 },
+    };
+    const tPricing: Pricing = {
+      equity: { time: 0, price: 100, security: equity },
+      cash: { time: 0, price: 200, security: cash },
+    };
+    const tPlus1Pricing = {
+      equity: { time: 0, price: 200, security: equity },
+      cash: { time: 0, price: 100, security: cash },
+    };
+    const rebalancedPortfolio = fullRebalancing(
+      0,
+      portfolio,
+      tPricing,
+      tPlus1Pricing,
+      1000
+    );
+    expect(rebalancedPortfolio).to.deep.eq({
+      cash: { numberOfShares: 4 },
+      equity: { numberOfShares: 3 },
+    });
+    expect(
+      _.sum(_.values(pricePositions(rebalancedPortfolio, tPlus1Pricing)))
+    ).approximately(1000, 1e-12);
   });
 });
