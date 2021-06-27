@@ -84,7 +84,8 @@ describe("ESG", () => {
         { dummy: { time: 1001, price: futurePrice, security: security } },
         futurePortfolio,
         decision.transactions,
-        savingsParams
+        savingsParams,
+        99
       )
     ).to.deep.eq({
       fv: 605,
@@ -93,6 +94,7 @@ describe("ESG", () => {
       totalBoughtDollar: 4.999999999999982,
       totalBoughtNumShares: 0.02499999999999991,
       externalCashflow: 1000,
+      shortfall: 99,
     });
   });
 
@@ -140,6 +142,7 @@ describe("ESG", () => {
           totalBoughtDollar: 1004.9999999999998,
           totalDividends: 5,
           externalCashflow: 1000,
+          shortfall: 0,
         },
       },
       evolve: "ignored",
@@ -151,7 +154,8 @@ describe("ESG", () => {
         { dummy: { time: 1001, price: 100, security: security } },
         { dummy: investment },
         [],
-        savingsParams
+        savingsParams,
+        99
       );
       expect(statistics).to.deep.eq({
         totalBoughtDollar: 0,
@@ -160,6 +164,7 @@ describe("ESG", () => {
         totalBoughtNumShares: 0,
         totalDividends: 0,
         externalCashflow: 1000,
+        shortfall: 99,
       });
     });
     it("should aggregate all dividends", () => {
@@ -167,7 +172,8 @@ describe("ESG", () => {
         { dummy: { time: 1001, price: 100, security: security } },
         { dummy: investment },
         [{ dividend: 5 }, { dividend: 3 }],
-        savingsParams
+        savingsParams,
+        99
       );
       expect(statistics.totalDividends).to.eq(8);
       expect(statistics).to.deep.eq({
@@ -177,6 +183,7 @@ describe("ESG", () => {
         numberOfShares: { dummy: 3 },
         totalDividends: 8,
         externalCashflow: 1000,
+        shortfall: 99,
       });
     });
     it("should say what is bought are reinvested dividends", () => {
@@ -189,7 +196,8 @@ describe("ESG", () => {
           { id: "dummy", bought: 3, cost: 4 },
           { id: "dummy", bought: 1, cost: 2 },
         ],
-        savingsParams
+        savingsParams,
+        99
       );
       expect(statistics).to.deep.eq({
         totalDividends: 8,
@@ -198,6 +206,7 @@ describe("ESG", () => {
         totalBoughtNumShares: 4,
         numberOfShares: { dummy: 3 },
         externalCashflow: 1000,
+        shortfall: 99,
       });
     });
     it("should subtract sold from reinvested", () => {
@@ -212,7 +221,8 @@ describe("ESG", () => {
           { id: "dummy", sold: 2, proceeds: 3 },
           { id: "dummy", sold: 2, proceeds: 1 },
         ],
-        savingsParams
+        savingsParams,
+        99
       );
       expect(statistics).to.deep.eq({
         totalDividends: 8,
@@ -221,6 +231,7 @@ describe("ESG", () => {
         numberOfShares: { dummy: 3 },
         totalBoughtNumShares: 0,
         externalCashflow: 1000,
+        shortfall: 99,
       });
     });
   });

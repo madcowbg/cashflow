@@ -33,6 +33,7 @@ function aggregateS(statistics: Statistics[]): Statistics {
     totalBoughtDollar: _.sum(statistics.map((s) => s.totalBoughtDollar)),
     totalDividends: _.sum(statistics.map((s) => s.totalDividends)),
     totalBoughtNumShares: _.sum(statistics.map((s) => s.totalBoughtNumShares)),
+    shortfall: _.sum(statistics.map((s) => s.shortfall)),
   };
 }
 

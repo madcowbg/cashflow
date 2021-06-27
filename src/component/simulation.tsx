@@ -176,6 +176,13 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         yAxisID: "$ small",
       },
       {
+        label: "Shortfall ($)",
+        data: this.formatDollar(
+          adjustForInflation(_.map(statisticsOverTime, (s) => s.shortfall))
+        ),
+        yAxisID: "$ small",
+      },
+      {
         label: "Theoretic Fully Rebalanced Investment Value ($) [FIXME]",
         data: this.formatDollar(
           adjustForInflation(
@@ -210,7 +217,6 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         ),
         yAxisID: "#",
       },
-
       {
         label: "Dividends ($)",
         data: this.formatDollar(
@@ -218,7 +224,13 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
         ),
         yAxisID: "$ small",
       },
-
+      {
+        label: "Shortfall ($)",
+        data: this.formatDollar(
+          adjustForInflation(_.map(statisticsOverTime, (s) => s.shortfall))
+        ),
+        yAxisID: "$ small",
+      },
       {
         label: "Realized Dividend Yield (%)",
         data: this.formatPercent(
@@ -430,7 +442,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
                 <tr key={iPeriod}>
                   <td key="month">{iPeriod}</td>
                   {miscSummaryDatasets.map((d, idx) => (
-                    <td key={idx}>{d.data[iPeriod]}</td>
+                    <td key={idx}>{`${d.data[iPeriod]}`}</td>
                   ))}
                 </tr>
               ))}

@@ -32,6 +32,7 @@ export interface Statistics {
   totalBoughtDollar: number;
   totalBoughtNumShares: number;
   externalCashflow: number;
+  shortfall: number;
 }
 
 type Transaction<I> =
@@ -90,7 +91,8 @@ export function calculateStatistics<I extends string>(
   futurePrice: Pricing<I>,
   investment: Portfolio<I>,
   transactions: Transaction<I>[],
-  savings: SavingsParams
+  savings: SavingsParams,
+  shortfall: number
 ): Statistics {
   const agg = aggregated(transactions);
   return {
@@ -100,6 +102,7 @@ export function calculateStatistics<I extends string>(
     totalBoughtDollar: agg.totalBoughtDollar - agg.totalSoldDollar,
     totalBoughtNumShares: agg.totalBoughtNumShares - agg.totalSoldNumShares,
     externalCashflow: savings.monthlyInvestment,
+    shortfall: shortfall,
   };
 }
 
@@ -113,7 +116,8 @@ export function fullRebalancing<I extends string>(
   const currentPositionValues = pricePositions(investment, tPricing);
   const portfolioPV = _.sum(_.values(currentPositionValues));
   return _.mapValues(currentPositionValues, (cp: number, id: I): Allocation => {
-    const futurePositionValue = (cp / portfolioPV) * portfolioFV;
+    const futurePositionValue =
+      portfolioPV == 0 ? 0 : (cp / portfolioPV) * portfolioFV;
     return {
       numberOfShares: futurePositionValue / tPlus1Pricing[id].price,
     };
@@ -272,10 +276,13 @@ function computeInvestmentsAtTime<I extends string>(
   const accruedDividends = _.sum(_.values(accruedDividendsPerPosition));
 
   const tPlus1PortfolioPrices = pricePositions(portfolio, securityAtTplus1);
-  const fv =
+  const endingValue =
     accruedDividends +
     currentSavings.monthlyInvestment +
     _.sum(_.values(tPlus1PortfolioPrices));
+
+  const fv = Math.max(0, endingValue);
+  const shortfall = endingValue - fv;
 
   const futurePortfolio = strategy(
     time,
@@ -307,7 +314,8 @@ function computeInvestmentsAtTime<I extends string>(
       securityAtTplus1,
       futurePortfolio,
       decision.transactions,
-      currentSavings
+      currentSavings,
+      shortfall
     ),
   };
   return { futurePortfolio, investmentOutcome };
