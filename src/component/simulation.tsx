@@ -5,6 +5,7 @@ import { Line } from "react-chartjs-2";
 import { EconometricInputComponent, EconomicParams } from "../calc/econometric";
 import {
   currentYield,
+  DummyI,
   InvestmentOutcome,
   MarketParams,
   MarketSentiment,
@@ -74,17 +75,17 @@ function formatFloat(precision: number): (vals: number[]) => number[] {
   return (vals) => _.map(vals, (val) => Math.round(val * size) / size);
 }
 
-function resampleToFrequency(
+function resampleToFrequency<I extends string>(
   displayPeriodYears: number,
   displayFreq: number,
   cpi: Process<number>,
   process: {
-    evolution: Process<InvestmentOutcome>;
+    evolution: Process<InvestmentOutcome<I>>;
     monthsIdx: Process<number>;
     sentimentOverTime: Process<MarketSentiment>;
   }
 ): {
-  evolution: InvestmentOutcome[];
+  evolution: InvestmentOutcome<I>[];
   monthsIdx: number[];
   sentimentOverTime: MarketSentiment[];
   cpi: number[];
@@ -441,7 +442,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   }
 
   private calculateInvestmentDatasets(): {
-    outcomeOverTime: Outcome[];
+    outcomeOverTime: Outcome<DummyI>[];
     statisticsOverTime: Statistics[];
     initialSecurity: Security;
     monthsIdx: number[];
@@ -472,7 +473,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
     );
 
     const { evolution, monthsIdx, sentimentOverTime, cpi } =
-      resampleToFrequency(
+      resampleToFrequency<DummyI>(
         this.state.displayPeriodYears,
         this.state.displayFreq,
         cpiProc,
@@ -689,7 +690,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       sampler(trajectory.pick(seedForSimIndex(i)).investments)
     );
     const simulatedFVs: Process<number>[] = _.map(simulationOutcomes, (s) =>
-      fmap((io: InvestmentOutcome): number => io.statistics.fv)(s)
+      fmap((io: InvestmentOutcome<DummyI>): number => io.statistics.fv)(s)
     );
     const cpi = inflationAdjustmentFactor(this.state.params, 12);
     const inflationAdjust = this.state.params.adjustForInflation
@@ -697,7 +698,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
           fmap((val: number, cpi: number) => val / cpi)(proc, cpi)
       : (proc: Process<number>) => proc;
 
-    const monthIdxs = fmap((io: InvestmentOutcome) => io.time)(
+    const monthIdxs = fmap((io: InvestmentOutcome<DummyI>) => io.time)(
       sampler(trajectory.pick(-1).investments)
     );
 

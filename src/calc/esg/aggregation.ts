@@ -9,14 +9,16 @@ import {
   Statistics,
 } from "./esg";
 
-function aggregateD(ids: InvestmentDecision[]): InvestmentDecision {
+function aggregateD<I extends string>(
+  ids: InvestmentDecision<I>[]
+): InvestmentDecision<I> {
   return {
     time: _.last(_.map(ids, (dec) => dec.time)),
     transactions: [].concat(...ids.map((dec) => dec.transactions)),
   };
 }
 
-function aggregateO(outcomes: Outcome[]): Outcome {
+function aggregateO<I extends string>(outcomes: Outcome<I>[]): Outcome<I> {
   return {
     decision: aggregateD(outcomes.map((o) => o.decision)),
     investment: _.last(outcomes.map((io) => io.investment)),
@@ -34,7 +36,9 @@ function aggregateS(statistics: Statistics[]): Statistics {
   };
 }
 
-export function aggregateIO(...args: InvestmentOutcome[]): InvestmentOutcome {
+export function aggregateIO<I extends string>(
+  ...args: InvestmentOutcome<I>[]
+): InvestmentOutcome<I> {
   return {
     time: _.last(_.map(args, (io) => io.time)),
     outcome: aggregateO(args.map((io) => io.outcome)),
@@ -42,18 +46,18 @@ export function aggregateIO(...args: InvestmentOutcome[]): InvestmentOutcome {
   };
 }
 
-export function investmentProcess(
+export function investmentProcess<I extends string>(
   displayFreq: number,
-  investments: Process<InvestmentOutcome>,
+  investments: Process<InvestmentOutcome<I>>,
   sentiment: Process<MarketSentiment>
 ): {
   sentimentOverTime: Process<MarketSentiment>;
-  evolution: Process<InvestmentOutcome>;
+  evolution: Process<InvestmentOutcome<I>>;
   monthsIdx: Process<number>;
 } {
   const monthsIdx = sample<number>(displayFreq)(count(0));
 
-  const evolution = aggregate<InvestmentOutcome>(
+  const evolution = aggregate<InvestmentOutcome<I>>(
     displayFreq,
     aggregateIO
   )(investments);

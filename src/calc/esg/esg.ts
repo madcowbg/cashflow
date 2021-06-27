@@ -34,21 +34,21 @@ export interface Statistics {
   externalCashflow: number;
 }
 
-type Transaction =
-  | ({ id: string } & (
+type Transaction<I> =
+  | ({ id: I } & (
       | { bought: number; cost: number }
       | { sold: number; proceeds: number }
     ))
   | { dividend: number };
 
-export interface InvestmentDecision {
+export interface InvestmentDecision<I> {
   time: number;
-  transactions: Transaction[];
+  transactions: Transaction<I>[];
 }
 
-export interface Outcome {
-  investment: Portfolio;
-  decision: InvestmentDecision;
+export interface Outcome<I extends string> {
+  investment: Portfolio<I>;
+  decision: InvestmentDecision<I>;
 }
 
 export function nominalDividendGrowth(
@@ -66,7 +66,7 @@ type AggregateTransaction = {
   totalSoldNumShares: number;
 };
 
-function aggregated(transactions: Transaction[]): AggregateTransaction {
+function aggregated<I>(transactions: Transaction<I>[]): AggregateTransaction {
   return _.reduce(
     transactions,
     (a: AggregateTransaction, b: any) => ({
@@ -86,10 +86,10 @@ function aggregated(transactions: Transaction[]): AggregateTransaction {
   );
 }
 
-export function calculateStatistics(
-  futurePrice: Pricing,
-  investment: Portfolio,
-  transactions: Transaction[],
+export function calculateStatistics<I extends string>(
+  futurePrice: Pricing<I>,
+  investment: Portfolio<I>,
+  transactions: Transaction<I>[],
   savings: SavingsParams
 ): Statistics {
   const agg = aggregated(transactions);
@@ -103,16 +103,16 @@ export function calculateStatistics(
   };
 }
 
-export function fullRebalancing(
+export function fullRebalancing<I extends string>(
   time: number,
-  investment: Portfolio,
-  tPricing: Pricing,
-  tPlus1Pricing: Pricing,
+  investment: Portfolio<I>,
+  tPricing: Pricing<I>,
+  tPlus1Pricing: Pricing<I>,
   portfolioFV: number
-): Portfolio {
+): Portfolio<I> {
   const currentPositionValues = pricePositions(investment, tPricing);
   const portfolioPV = _.sum(_.values(currentPositionValues));
-  return _.mapValues(currentPositionValues, (cp, id): Position => {
+  return _.mapValues(currentPositionValues, (cp: number, id: I): Position => {
     const futurePositionValue = (cp / portfolioPV) * portfolioFV;
     return {
       numberOfShares: futurePositionValue / tPlus1Pricing[id].price,
@@ -180,9 +180,9 @@ export function evaluateSecurity(
   )(evolvingState, sentiment);
 }
 
-export interface InvestmentOutcome {
+export interface InvestmentOutcome<I extends string> {
   time: number;
-  outcome: Outcome;
+  outcome: Outcome<I>;
   statistics: Statistics;
 }
 
@@ -190,52 +190,56 @@ export interface SavingsParams {
   monthlyInvestment: number;
 }
 
-export type Pricing = { [id: string]: SecurityAtTime };
+type PerSecurity<InvestmentID extends string, T> = {
+  [ID in InvestmentID]: T;
+};
 
-type Portfolio = { [id: string]: Position };
+export type Pricing<I extends string> = PerSecurity<I, SecurityAtTime>;
+type Portfolio<I extends string> = PerSecurity<I, Position>;
 
-type Strategy = (
+type Strategy<I extends string> = (
   time: number,
-  investment: Portfolio,
-  tPricing: Pricing,
-  tPlus1Pricing: Pricing,
+  investment: Portfolio<I>,
+  tPricing: Pricing<I>,
+  tPlus1Pricing: Pricing<I>,
   fv: number
-) => Portfolio;
+) => Portfolio<I>;
 
-export function diff(
-  portfolio: Portfolio,
-  futurePortfolio: Portfolio
-): Portfolio {
-  const diffPosition = (id: string): Position => ({
-    numberOfShares:
-      (futurePortfolio[id]?.numberOfShares ?? 0) -
-      (portfolio[id]?.numberOfShares ?? 0),
-  });
+export function diff<I extends string>(
+  portfolio: Portfolio<I>,
+  futurePortfolio: Portfolio<I>
+): Portfolio<I> {
   const allIds = _.union(_.keys(portfolio), _.keys(futurePortfolio));
-  const diffPos: [string, Position][] = _.map(allIds, (id) => [
-    id,
-    diffPosition(id),
-  ]);
-  return _.fromPairs(
-    _.filter(diffPos, (dp) => Math.abs(dp[1].numberOfShares) > 1e-10)
+
+  const diffPosition: Position[] = _.map(
+    allIds,
+    (id: I): Position => ({
+      numberOfShares:
+        (futurePortfolio[id]?.numberOfShares ?? 0) -
+        (portfolio[id]?.numberOfShares ?? 0),
+    })
   );
+  return _.zipObject<Position>(allIds, diffPosition) as Portfolio<I>;
 }
 
-export function pricePositions(
-  portfolio: Portfolio,
-  securityAtTplus1: Pricing
-) {
+export function pricePositions<I extends string>(
+  portfolio: Portfolio<I>,
+  securityAtTplus1: Pricing<I>
+): PerSecurity<I, number> {
   return _.mapValues(
     portfolio,
-    (pos, id) => securityAtTplus1[id].price * pos.numberOfShares
+    (pos, id: I) => securityAtTplus1[id].price * pos.numberOfShares
   );
 }
 
-export function toTrades(portfolioChange: Portfolio, pricing: Pricing) {
+export function toTrades<I extends string>(
+  portfolioChange: Portfolio<I>,
+  pricing: Pricing<I>
+): Transaction<I>[] {
   return _.values(
     _.mapValues(
       portfolioChange,
-      (pos: Position, id: string): Transaction =>
+      (pos: Position, id: I): Transaction<I> =>
         pos.numberOfShares < 0
           ? {
               id,
@@ -251,17 +255,17 @@ export function toTrades(portfolioChange: Portfolio, pricing: Pricing) {
   );
 }
 
-function computeInvestmentsAtTime(
+function computeInvestmentsAtTime<I extends string>(
   time: number,
-  securityAtTplus1: Pricing,
-  securityAtT: Pricing,
-  portfolio: Portfolio,
+  securityAtTplus1: Pricing<I>,
+  securityAtT: Pricing<I>,
+  portfolio: Portfolio<I>,
   currentSavings: SavingsParams,
-  strategy: Strategy
-): { futurePortfolio: Portfolio; investmentOutcome: InvestmentOutcome } {
+  strategy: Strategy<I>
+): { futurePortfolio: Portfolio<I>; investmentOutcome: InvestmentOutcome<I> } {
   const accruedDividendsPerPosition = _.mapValues(
     portfolio,
-    (pos, id) =>
+    (pos, id: I) =>
       pos.numberOfShares *
       (securityAtT[id].security.currentAnnualDividends / 12)
   );
@@ -281,17 +285,19 @@ function computeInvestmentsAtTime(
     fv
   );
 
-  const trades: Transaction[] = toTrades(
+  const trades: Transaction<I>[] = toTrades(
     diff(portfolio, futurePortfolio),
     securityAtTplus1
   );
 
   const decision = {
     time: time,
-    transactions: trades.concat({ dividend: accruedDividends } as Transaction),
+    transactions: trades.concat({
+      dividend: accruedDividends,
+    } as Transaction<I>),
   };
 
-  const investmentOutcome: InvestmentOutcome = {
+  const investmentOutcome: InvestmentOutcome<I> = {
     time: time,
     outcome: {
       investment: futurePortfolio,
@@ -307,26 +313,26 @@ function computeInvestmentsAtTime(
   return { futurePortfolio, investmentOutcome };
 }
 
-export function investOverTime(
+export function investOverTime<I extends string>(
   startTime: number,
   savingsProcess: Process<SavingsParams>,
-  securityProcess: Process<Pricing>,
-  initialInvestment: Portfolio,
-  strategy: Strategy
-): Process<InvestmentOutcome> {
+  securityProcess: Process<Pricing<I>>,
+  initialInvestment: Portfolio<I>,
+  strategy: Strategy<I>
+): Process<InvestmentOutcome<I>> {
   const futureSecurityProcess = securityProcess.evolve;
   type State = {
     t: number;
-    currentPortfolio: Portfolio;
-    outcome?: InvestmentOutcome;
+    currentPortfolio: Portfolio<I>;
+    outcome?: InvestmentOutcome<I>;
   };
 
   const stateP = stateful(
     (
       state: State,
-      currentSecurity: Pricing,
+      currentSecurity: Pricing<I>,
       currentSavings: SavingsParams,
-      securityAtTplus1: Pricing
+      securityAtTplus1: Pricing<I>
     ): State => {
       const { futurePortfolio, investmentOutcome } = computeInvestmentsAtTime(
         state.t,
@@ -429,6 +435,8 @@ export interface DividendParams {
 const SENTIMENT_SEED = 0;
 const REALIZATION_DIVIDEND_RATIO_SEED = 5123;
 
+export type DummyI = "equity"; // FIXME remove!
+
 export function savingsTrajectory(
   startingPV: number,
   marketParams: MarketParams,
@@ -439,7 +447,7 @@ export function savingsTrajectory(
   initialInvestmentVehicle: Security;
   investmentResult: Random<{
     sentiment: Process<MarketSentiment>;
-    investments: Process<InvestmentOutcome>;
+    investments: Process<InvestmentOutcome<DummyI>>;
   }>;
 } {
   const initialInvestmentPrice = 100;
@@ -469,7 +477,7 @@ export function savingsTrajectory(
           dividendParams
         ).pick(REALIZATION_DIVIDEND_RATIO_SEED + seed);
 
-        const securityAtTimes = fmap<SecurityAtTime, Pricing>(
+        const securityAtTimes = fmap<SecurityAtTime, Pricing<DummyI>>(
           (s: SecurityAtTime) => ({ equity: s })
         )(
           evaluateSecurity(
@@ -483,7 +491,7 @@ export function savingsTrajectory(
 
         const savings = inflationAdjustedSavings(marketParams, savingsParams);
 
-        const investments: Process<InvestmentOutcome> = investOverTime(
+        const investments: Process<InvestmentOutcome<DummyI>> = investOverTime(
           0,
           savings,
           securityAtTimes,

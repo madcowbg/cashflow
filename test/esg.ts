@@ -98,7 +98,9 @@ describe("ESG", () => {
 
   it("should have investOneMoreTime produce a particular result", () => {
     const sentiment = impliedSentiment(investmentVehicle, 200);
-    const securityAtTime = fmap<SecurityAtTime, Pricing>((s) => ({ dummy: s }))(
+    const securityAtTime = fmap<SecurityAtTime, Pricing<"dummy">>((s) => ({
+      dummy: s,
+    }))(
       evaluateSecurity(
         params,
         investmentVehicle,
@@ -276,7 +278,7 @@ describe("fullRebalancing", () => {
       equity: { numberOfShares: 3 },
       cash: { numberOfShares: 1 },
     };
-    const tPricing: Pricing = {
+    const tPricing = {
       equity: { time: 0, price: 100, security: equity },
       cash: { time: 0, price: 200, security: cash },
     };
