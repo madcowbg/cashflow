@@ -26,7 +26,7 @@ export interface Position {
 }
 
 export interface Statistics {
-  numberOfShares: number;
+  numberOfShares: { [id: string]: number };
   fv: number;
   totalDividends: number;
   totalBoughtDollar: number;
@@ -35,8 +35,10 @@ export interface Statistics {
 }
 
 type Transaction =
-  | { bought: number; cost: number }
-  | { sold: number; proceeds: number }
+  | ({ id: string } & (
+      | { bought: number; cost: number }
+      | { sold: number; proceeds: number }
+    ))
   | { dividend: number };
 
 export interface InvestmentDecision {
@@ -45,7 +47,7 @@ export interface InvestmentDecision {
 }
 
 export interface Outcome {
-  investment: Position;
+  investment: Portfolio;
   decision: InvestmentDecision;
 }
 
@@ -85,15 +87,15 @@ function aggregated(transactions: Transaction[]): AggregateTransaction {
 }
 
 export function calculateStatistics(
-  futurePrice: number,
-  investment: Position,
+  futurePrice: Pricing,
+  investment: Portfolio,
   transactions: Transaction[],
   savings: SavingsParams
 ): Statistics {
   const agg = aggregated(transactions);
   return {
-    numberOfShares: investment.numberOfShares,
-    fv: investment.numberOfShares * futurePrice,
+    numberOfShares: _.mapValues(investment, (pos) => pos.numberOfShares),
+    fv: _.sum(_.values(pricePositions(investment, futurePrice))),
     totalDividends: agg.totalDividends,
     totalBoughtDollar: agg.totalBoughtDollar - agg.totalSoldDollar,
     totalBoughtNumShares: agg.totalBoughtNumShares - agg.totalSoldNumShares,
@@ -101,37 +103,21 @@ export function calculateStatistics(
   };
 }
 
-export function noReinvestmentStrategy(
+export function fullRebalancing(
   time: number,
-  reinvestmentPrice: number,
-  vehicle: Security,
-  investment: Position
-): InvestmentDecision {
-  const dividends =
-    (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
-  return {
-    time: time,
-    transactions: [{ dividend: dividends }],
-  };
-}
-
-export function fullReinvestmentStrategy(
-  time: number,
-  reinvestmentPrice: number,
-  vehicle: Security,
-  investment: Position
-): InvestmentDecision {
-  const accruedDividends =
-    (investment.numberOfShares * vehicle.currentAnnualDividends) / 12;
-
-  const reinvestmentBoughtShares = accruedDividends / reinvestmentPrice;
-  return {
-    time: time,
-    transactions: [
-      { bought: reinvestmentBoughtShares, cost: accruedDividends },
-      { dividend: accruedDividends },
-    ],
-  };
+  investment: Portfolio,
+  tPricing: Pricing,
+  tPlus1Pricing: Pricing,
+  portfolioFV: number
+): Portfolio {
+  const currentPositionValues = pricePositions(investment, tPricing);
+  const portfolioPV = _.sum(_.values(currentPositionValues));
+  return _.mapValues(currentPositionValues, (cp, id): Position => {
+    const futurePositionValue = (cp / portfolioPV) * portfolioFV;
+    return {
+      numberOfShares: futurePositionValue / tPlus1Pricing[id].price,
+    };
+  });
 }
 
 /**
@@ -198,129 +184,163 @@ export interface InvestmentOutcome {
   time: number;
   outcome: Outcome;
   statistics: Statistics;
-  evolvedVehicle: Security;
-}
-
-export function consolidateInvestment(
-  investment: Position,
-  decision: InvestmentDecision
-): Position {
-  const agg = aggregated(decision.transactions);
-  return {
-    numberOfShares:
-      investment.numberOfShares +
-      agg.totalBoughtNumShares -
-      agg.totalSoldNumShares,
-  };
 }
 
 export interface SavingsParams {
   monthlyInvestment: number;
 }
 
-function investCashflow(
-  strategyDecision: InvestmentDecision,
-  savings: SavingsParams,
-  securityAtTplus1: SecurityAtTime
-) {
-  const decision = {
-    time: strategyDecision.time,
-    transactions: strategyDecision.transactions.concat({
-      bought: savings.monthlyInvestment / securityAtTplus1.price,
-      cost: savings.monthlyInvestment,
-    }),
-  };
-  return decision;
+export type Pricing = { [id: string]: SecurityAtTime };
+
+type Portfolio = { [id: string]: Position };
+
+type Strategy = (
+  time: number,
+  investment: Portfolio,
+  tPricing: Pricing,
+  tPlus1Pricing: Pricing,
+  fv: number
+) => Portfolio;
+
+export function diff(
+  portfolio: Portfolio,
+  futurePortfolio: Portfolio
+): Portfolio {
+  const diffPosition = (id: string): Position => ({
+    numberOfShares:
+      (futurePortfolio[id]?.numberOfShares ?? 0) -
+      (portfolio[id]?.numberOfShares ?? 0),
+  });
+  const allIds = _.union(_.keys(portfolio), _.keys(futurePortfolio));
+  const diffPos: [string, Position][] = _.map(allIds, (id) => [
+    id,
+    diffPosition(id),
+  ]);
+  return _.fromPairs(
+    _.filter(diffPos, (dp) => Math.abs(dp[1].numberOfShares) > 1e-10)
+  );
+}
+
+function pricePositions(portfolio: Portfolio, securityAtTplus1: Pricing) {
+  return _.mapValues(
+    portfolio,
+    (pos, id) => securityAtTplus1[id].price * pos.numberOfShares
+  );
+}
+
+export function toTrades(portfolioChange: Portfolio, pricing: Pricing) {
+  return _.values(
+    _.mapValues(
+      portfolioChange,
+      (pos: Position, id: string): Transaction =>
+        pos.numberOfShares < 0
+          ? {
+              id,
+              sold: pos.numberOfShares,
+              proceeds: -pos.numberOfShares * pricing[id].price,
+            }
+          : {
+              id,
+              bought: pos.numberOfShares,
+              cost: pos.numberOfShares * pricing[id].price,
+            }
+    )
+  );
 }
 
 function computeInvestmentsAtTime(
   time: number,
-  securityAtTplus1: SecurityAtTime,
-  currentSecurity: SecurityAtTime,
-  currentPosition: Position,
+  securityAtTplus1: Pricing,
+  securityAtT: Pricing,
+  portfolio: Portfolio,
   currentSavings: SavingsParams,
-  strategy: (
-    time: number,
-    futurePrice: number,
-    vehicle: Security,
-    investment: Position,
-    savings: SavingsParams
-  ) => InvestmentDecision
-): { futurePosition: Position; investmentOutcome: InvestmentOutcome } {
-  const strategyDecision = strategy(
+  strategy: Strategy
+): { futurePortfolio: Portfolio; investmentOutcome: InvestmentOutcome } {
+  const accruedDividendsPerPosition = _.mapValues(
+    portfolio,
+    (pos, id) =>
+      pos.numberOfShares *
+      (securityAtT[id].security.currentAnnualDividends / 12)
+  );
+  const accruedDividends = _.sum(_.values(accruedDividendsPerPosition));
+
+  const tPlus1PortfolioPrices = pricePositions(portfolio, securityAtTplus1);
+  const fv =
+    accruedDividends +
+    currentSavings.monthlyInvestment +
+    _.sum(_.values(tPlus1PortfolioPrices));
+
+  const futurePortfolio = strategy(
     time,
-    securityAtTplus1.price,
-    currentSecurity.security,
-    currentPosition,
-    currentSavings
+    portfolio,
+    securityAtT,
+    securityAtTplus1,
+    fv
   );
 
-  const decision = investCashflow(
-    strategyDecision,
-    currentSavings,
+  const trades: Transaction[] = toTrades(
+    diff(portfolio, futurePortfolio),
     securityAtTplus1
   );
-  const futurePosition = consolidateInvestment(currentPosition, decision);
+
+  const decision = {
+    time: time,
+    transactions: trades.concat({ dividend: accruedDividends } as Transaction),
+  };
+
   const investmentOutcome: InvestmentOutcome = {
     time: time,
     outcome: {
-      investment: futurePosition,
+      investment: futurePortfolio,
       decision: decision,
     },
     statistics: calculateStatistics(
-      securityAtTplus1.price,
-      futurePosition,
+      securityAtTplus1,
+      futurePortfolio,
       decision.transactions,
       currentSavings
     ),
-    evolvedVehicle: securityAtTplus1.security,
   };
-  return { futurePosition, investmentOutcome };
+  return { futurePortfolio, investmentOutcome };
 }
 
 export function investOverTime(
   startTime: number,
   savingsProcess: Process<SavingsParams>,
-  securityProcess: Process<SecurityAtTime>,
-  initialInvestment: Position,
-  strategy: (
-    time: number,
-    futurePrice: number,
-    vehicle: Security,
-    investment: Position,
-    savings: SavingsParams
-  ) => InvestmentDecision
+  securityProcess: Process<Pricing>,
+  initialInvestment: Portfolio,
+  strategy: Strategy
 ): Process<InvestmentOutcome> {
   const futureSecurityProcess = securityProcess.evolve;
   type State = {
     t: number;
-    currentPosition: Position;
+    currentPortfolio: Portfolio;
     outcome?: InvestmentOutcome;
   };
 
   const stateP = stateful(
     (
       state: State,
-      currentSecurity: SecurityAtTime,
+      currentSecurity: Pricing,
       currentSavings: SavingsParams,
-      securityAtTplus1: SecurityAtTime
+      securityAtTplus1: Pricing
     ): State => {
-      const { futurePosition, investmentOutcome } = computeInvestmentsAtTime(
+      const { futurePortfolio, investmentOutcome } = computeInvestmentsAtTime(
         state.t,
         securityAtTplus1,
         currentSecurity,
-        state.currentPosition,
+        state.currentPortfolio,
         currentSavings,
         strategy
       );
       return {
         t: state.t + 1,
-        currentPosition: futurePosition,
+        currentPortfolio: futurePortfolio,
         outcome: investmentOutcome,
       };
     }
   )(
-    { t: startTime, currentPosition: initialInvestment, outcome: undefined },
+    { t: startTime, currentPortfolio: initialInvestment, outcome: undefined },
     securityProcess,
     savingsProcess,
     futureSecurityProcess
@@ -446,13 +466,17 @@ export function savingsTrajectory(
           dividendParams
         ).pick(REALIZATION_DIVIDEND_RATIO_SEED + seed);
 
-        const securityAtTimes = evaluateSecurity(
-          marketParams,
-          initialInvestmentVehicle,
-          sentiment,
-          realizedDividendRatio,
-          0
-        );
+        const securityAtTimes = fmap<SecurityAtTime, Pricing>(
+          (s: SecurityAtTime) => ({ equity: s })
+        )(
+          evaluateSecurity(
+            marketParams,
+            initialInvestmentVehicle,
+            sentiment,
+            realizedDividendRatio,
+            0
+          )
+        ); // fixme need multiple securities
 
         const savings = inflationAdjustedSavings(marketParams, savingsParams);
 
@@ -460,8 +484,8 @@ export function savingsTrajectory(
           0,
           savings,
           securityAtTimes,
-          initialInvestment,
-          fullReinvestmentStrategy
+          { equity: initialInvestment },
+          fullRebalancing
         );
         return { sentiment, investments };
       },

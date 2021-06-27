@@ -1,25 +1,27 @@
 import { expect } from "chai";
 import {
   calculateStatistics,
-  consolidateInvestment,
   currentYield,
   nominalDividendGrowth,
   evaluateSecurity,
   evolveSecurity,
-  fullReinvestmentStrategy,
   impliedSentiment,
   inflationAdjustedSavings,
   investOverTime,
   MarketParams,
   MarketSentiment,
-  noReinvestmentStrategy,
   Position,
   priceDDM,
   SavingsParams,
   Security,
+  fullRebalancing,
+  SecurityAtTime,
+  Pricing,
+  toTrades,
+  diff,
 } from "../src/calc/esg/esg";
 import _ = require("lodash");
-import { constant } from "../src/calc/processes";
+import { constant, fmap } from "../src/calc/processes";
 
 describe("ESG", () => {
   const params: MarketParams = {
@@ -49,67 +51,67 @@ describe("ESG", () => {
   const investment: Position = {
     numberOfShares: 3,
   };
-  it("should have one-step noReinvestmentStrategy with a particular outcome", () => {
-    const outcome = noReinvestmentStrategy(
-      1000,
-      200,
-      investmentVehicle,
-      investment
-    );
-    expect(outcome).to.deep.equal({
-      time: 1000,
-      transactions: [{ dividend: 5 }],
-    });
-  });
 
   const savingsParams: SavingsParams = { monthlyInvestment: 1000 };
   it("should have one-step fullReinvestmentStrategy with a particular outcome", () => {
     const futurePrice = 200;
-    const decision = fullReinvestmentStrategy(
+    const securityAtTplus1 = {
+      dummy: { time: 1001, price: futurePrice, security: investmentVehicle },
+    };
+    const portfolio = { dummy: investment };
+    const futurePortfolio = fullRebalancing(
       1000,
-      futurePrice,
-      investmentVehicle,
-      investment
+      portfolio,
+      { dummy: { time: 1001, price: 100, security: investmentVehicle } },
+      securityAtTplus1,
+      3.025 * futurePrice
     );
-    expect(decision).to.deep.eq({
-      time: 1000,
-      transactions: [{ bought: 0.025, cost: 5 }, { dividend: 5 }],
-    });
-    expect(consolidateInvestment(investment, decision)).to.deep.eq({
-      numberOfShares: 3.025,
+
+    const trades = toTrades(diff(portfolio, futurePortfolio), securityAtTplus1);
+    const decision = {
+      time: 1001,
+      transactions: trades.concat({ dividend: 5 }),
+    };
+
+    expect(futurePortfolio).to.deep.eq({
+      dummy: {
+        numberOfShares: 3.025,
+      },
     });
     expect(
       calculateStatistics(
-        futurePrice,
-        consolidateInvestment(investment, decision),
+        { dummy: { time: 1001, price: futurePrice, security: security } },
+        futurePortfolio,
         decision.transactions,
         savingsParams
       )
     ).to.deep.eq({
       fv: 605,
       totalDividends: 5,
-      numberOfShares: 3.025,
-      totalBoughtDollar: 5,
-      totalBoughtNumShares: 0.025,
+      numberOfShares: { dummy: 3.025 },
+      totalBoughtDollar: 4.999999999999982,
+      totalBoughtNumShares: 0.02499999999999991,
       externalCashflow: 1000,
     });
   });
 
   it("should have investOneMoreTime produce a particular result", () => {
     const sentiment = impliedSentiment(investmentVehicle, 200);
-    const securityAtTime = evaluateSecurity(
-      params,
-      investmentVehicle,
-      constant(sentiment),
-      constant(1),
-      0
+    const securityAtTime = fmap<SecurityAtTime, Pricing>((s) => ({ dummy: s }))(
+      evaluateSecurity(
+        params,
+        investmentVehicle,
+        constant(sentiment),
+        constant(1),
+        0
+      )
     );
     const result = investOverTime(
       0,
       inflationAdjustedSavings(params, savingsParams),
       securityAtTime,
-      investment,
-      fullReinvestmentStrategy
+      { dummy: investment },
+      fullRebalancing
     );
     expect(_.assign({}, result, { evolve: "ignored" })).to.be.deep.eq({
       v: {
@@ -119,29 +121,22 @@ describe("ESG", () => {
             time: 0,
             transactions: [
               {
-                bought: 0.024952670926261897,
-                cost: 5,
+                id: "dummy",
+                bought: 5.01548685617864,
+                cost: 1004.9999999999998,
               },
               { dividend: 5 },
-              {
-                bought: 4.990534185252379,
-                cost: 1000,
-              },
             ],
           },
-          investment: { numberOfShares: 8.01548685617864 },
+          investment: { dummy: { numberOfShares: 8.01548685617864 } },
         },
         statistics: {
           fv: 1606.138052288141,
-          numberOfShares: 8.01548685617864,
-          totalBoughtNumShares: 5.015486856178641,
-          totalBoughtDollar: 1005,
+          numberOfShares: { dummy: 8.01548685617864 },
+          totalBoughtNumShares: 5.01548685617864,
+          totalBoughtDollar: 1004.9999999999998,
           totalDividends: 5,
           externalCashflow: 1000,
-        },
-        evolvedVehicle: {
-          currentAnnualDividends: 20.037935076271367,
-          realDividendGrowth: 0.003,
         },
       },
       evolve: "ignored",
@@ -150,15 +145,15 @@ describe("ESG", () => {
   describe("calculateStatistics", () => {
     it("should have produce zeros on empty inputs", () => {
       const statistics = calculateStatistics(
-        100,
-        investment,
+        { dummy: { time: 1001, price: 100, security: security } },
+        { dummy: investment },
         [],
         savingsParams
       );
       expect(statistics).to.deep.eq({
         totalBoughtDollar: 0,
         fv: 300,
-        numberOfShares: 3,
+        numberOfShares: { dummy: 3 },
         totalBoughtNumShares: 0,
         totalDividends: 0,
         externalCashflow: 1000,
@@ -166,8 +161,8 @@ describe("ESG", () => {
     });
     it("should aggregate all dividends", () => {
       const statistics = calculateStatistics(
-        100,
-        investment,
+        { dummy: { time: 1001, price: 100, security: security } },
+        { dummy: investment },
         [{ dividend: 5 }, { dividend: 3 }],
         savingsParams
       );
@@ -176,20 +171,20 @@ describe("ESG", () => {
         fv: 300,
         totalBoughtDollar: 0,
         totalBoughtNumShares: 0,
-        numberOfShares: 3,
+        numberOfShares: { dummy: 3 },
         totalDividends: 8,
         externalCashflow: 1000,
       });
     });
     it("should say what is bought are reinvested dividends", () => {
       const statistics = calculateStatistics(
-        100,
-        investment,
+        { dummy: { time: 1001, price: 100, security: security } },
+        { dummy: investment },
         [
           { dividend: 5 },
           { dividend: 3 },
-          { bought: 3, cost: 4 },
-          { bought: 1, cost: 2 },
+          { id: "dummy", bought: 3, cost: 4 },
+          { id: "dummy", bought: 1, cost: 2 },
         ],
         savingsParams
       );
@@ -198,21 +193,21 @@ describe("ESG", () => {
         fv: 300,
         totalBoughtDollar: 6,
         totalBoughtNumShares: 4,
-        numberOfShares: 3,
+        numberOfShares: { dummy: 3 },
         externalCashflow: 1000,
       });
     });
     it("should subtract sold from reinvested", () => {
       const statistics = calculateStatistics(
-        100,
-        investment,
+        { dummy: { time: 1001, price: 100, security: security } },
+        { dummy: investment },
         [
           { dividend: 5 },
           { dividend: 3 },
-          { bought: 3, cost: 4 },
-          { bought: 1, cost: 2 },
-          { sold: 2, proceeds: 3 },
-          { sold: 2, proceeds: 1 },
+          { id: "dummy", bought: 3, cost: 4 },
+          { id: "dummy", bought: 1, cost: 2 },
+          { id: "dummy", sold: 2, proceeds: 3 },
+          { id: "dummy", sold: 2, proceeds: 1 },
         ],
         savingsParams
       );
@@ -220,7 +215,7 @@ describe("ESG", () => {
         totalDividends: 8,
         fv: 300,
         totalBoughtDollar: 2,
-        numberOfShares: 3,
+        numberOfShares: { dummy: 3 },
         totalBoughtNumShares: 0,
         externalCashflow: 1000,
       });

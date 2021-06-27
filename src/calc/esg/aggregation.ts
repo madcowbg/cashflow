@@ -39,7 +39,6 @@ export function aggregateIO(...args: InvestmentOutcome[]): InvestmentOutcome {
     time: _.last(_.map(args, (io) => io.time)),
     outcome: aggregateO(args.map((io) => io.outcome)),
     statistics: aggregateS(args.map((io) => io.statistics)),
-    evolvedVehicle: _.last(_.map(args, (io) => io.evolvedVehicle)),
   };
 }
 

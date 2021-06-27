@@ -9,7 +9,6 @@ import {
   MarketParams,
   MarketSentiment,
   Outcome,
-  Position,
   SavingsParams,
   savingsTrajectory,
   Security,
@@ -141,8 +140,6 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
   render() {
     this.onRender(this.state);
     const {
-      investmentOverTime,
-      investmentVehicleOverTime,
       outcomeOverTime,
       statisticsOverTime,
       initialSecurity,
@@ -199,7 +196,7 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       {
         label: "Num shares",
         data: this.formatDollar(
-          adjustForInflation(_.map(statisticsOverTime, (s) => s.numberOfShares))
+          _.map(statisticsOverTime, (s) => s.numberOfShares["equity"]) // FIXME!
         ),
         yAxisID: "#",
       },
@@ -445,8 +442,6 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
 
   private calculateInvestmentDatasets(): {
     outcomeOverTime: Outcome[];
-    investmentOverTime: Position[];
-    investmentVehicleOverTime: Security[];
     statisticsOverTime: Statistics[];
     initialSecurity: Security;
     monthsIdx: number[];
@@ -485,8 +480,6 @@ export class ESGSimulation extends React.Component<ESGProps, ESGState> {
       );
 
     return {
-      investmentOverTime: _.map(evolution, (e) => e.outcome.investment),
-      investmentVehicleOverTime: _.map(evolution, (e) => e.evolvedVehicle),
       outcomeOverTime: _.map(evolution, (e) => e.outcome),
       statisticsOverTime: _.map(evolution, (e) => e.statistics),
       initialSecurity: initialInvestmentVehicle,
