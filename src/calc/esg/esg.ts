@@ -21,7 +21,7 @@ export interface Security {
   realDividendGrowth: number; // %
 }
 
-export interface Position {
+export interface Allocation {
   numberOfShares: number; // #
 }
 
@@ -112,7 +112,7 @@ export function fullRebalancing<I extends string>(
 ): Portfolio<I> {
   const currentPositionValues = pricePositions(investment, tPricing);
   const portfolioPV = _.sum(_.values(currentPositionValues));
-  return _.mapValues(currentPositionValues, (cp: number, id: I): Position => {
+  return _.mapValues(currentPositionValues, (cp: number, id: I): Allocation => {
     const futurePositionValue = (cp / portfolioPV) * portfolioFV;
     return {
       numberOfShares: futurePositionValue / tPlus1Pricing[id].price,
@@ -195,11 +195,11 @@ type PerSecurity<InvestmentID extends string, T> = {
 };
 
 export type Pricing<I extends string> = PerSecurity<I, SecurityAtTime>;
-type Portfolio<I extends string> = PerSecurity<I, Position>;
+type Portfolio<I extends string> = PerSecurity<I, Allocation>;
 
 type Strategy<I extends string> = (
   time: number,
-  investment: Portfolio<I>,
+  portfolio: Portfolio<I>,
   tPricing: Pricing<I>,
   tPlus1Pricing: Pricing<I>,
   fv: number
@@ -211,15 +211,15 @@ export function diff<I extends string>(
 ): Portfolio<I> {
   const allIds = _.union(_.keys(portfolio), _.keys(futurePortfolio));
 
-  const diffPosition: Position[] = _.map(
+  const diffPosition: Allocation[] = _.map(
     allIds,
-    (id: I): Position => ({
+    (id: I): Allocation => ({
       numberOfShares:
         (futurePortfolio[id]?.numberOfShares ?? 0) -
         (portfolio[id]?.numberOfShares ?? 0),
     })
   );
-  return _.zipObject<Position>(allIds, diffPosition) as Portfolio<I>;
+  return _.zipObject<Allocation>(allIds, diffPosition) as Portfolio<I>;
 }
 
 export function pricePositions<I extends string>(
@@ -239,7 +239,7 @@ export function toTrades<I extends string>(
   return _.values(
     _.mapValues(
       portfolioChange,
-      (pos: Position, id: I): Transaction<I> =>
+      (pos: Allocation, id: I): Transaction<I> =>
         pos.numberOfShares < 0
           ? {
               id,
@@ -457,7 +457,7 @@ export function savingsTrajectory(
     realDividendGrowth: investmentParams.realDividendGrowth,
   };
 
-  const initialInvestment: Position = {
+  const initialInvestment: Allocation = {
     numberOfShares: startingPV / initialInvestmentPrice,
   };
 

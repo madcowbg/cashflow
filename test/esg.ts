@@ -10,7 +10,7 @@ import {
   investOverTime,
   MarketParams,
   MarketSentiment,
-  Position,
+  Allocation,
   priceDDM,
   SavingsParams,
   Security,
@@ -49,7 +49,7 @@ describe("ESG", () => {
     currentAnnualDividends: 20,
     realDividendGrowth: 0.003,
   };
-  const investment: Position = {
+  const investment: Allocation = {
     numberOfShares: 3,
   };
 
