@@ -1,6 +1,6 @@
-import { lcg } from "../src/calc/lcg";
+import { lcg } from "../../src/calc/lcg";
 import { expect } from "chai";
-import { take } from "../src/calc/processes";
+import { take } from "../../src/calc/processes";
 import * as _ from "lodash";
 
 describe("lcg", () => {

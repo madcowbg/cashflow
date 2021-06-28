@@ -5,7 +5,7 @@ import {
   constant,
   sample,
   aggregate,
-} from "../src/calc/processes";
+} from "../../src/calc/processes";
 import { expect } from "chai";
 import _ = require("lodash");
 

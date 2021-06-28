@@ -1,4 +1,4 @@
-import { random_discrete_bridge } from "../src/calc/brownian_bridge";
+import { random_discrete_bridge } from "../../src/calc/brownian_bridge";
 import { expect } from "chai";
 
 const FIXED_SEED = 9881239;

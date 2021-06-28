@@ -9,7 +9,7 @@ export type Random<A> = {
 };
 
 /**
- *
+ * A mean-reverting process.
  * @param x_0 the current level of the process
  * @param ltm the long-term mean of the process
  * @param nu the mean-reversion strength parameter
@@ -50,6 +50,11 @@ function randomNormal(mu: number, sigma: number): (seed: number) => number {
   };
 }
 
+/**
+ * A white-noise process
+ * @param mean
+ * @param stdev
+ */
 export function white_noise(
   mean: number,
   stdev: number

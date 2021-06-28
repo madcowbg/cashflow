@@ -1,6 +1,10 @@
-import { random_mean_reverting } from "../src/calc/random_processes";
+import {
+  random_mean_reverting,
+  white_noise,
+} from "../../src/calc/random_processes";
 import { expect } from "chai";
-import { take } from "../src/calc/processes";
+import { take } from "../../src/calc/processes";
+import { correlation, sampleStats } from "../../src/calc/statistics";
 import _ = require("lodash");
 
 describe("mean_reversion", () => {
@@ -26,18 +30,7 @@ describe("mean_reversion", () => {
 
     const a = diff(take(1000)(random_mean_reverting(2, 3, 0.2, 0.2).pick(123)));
     const b = diff(take(1000)(random_mean_reverting(2, 3, 0.2, 0.2).pick(124)));
-
-    const meanA = _.mean(a);
-    const meanB = _.mean(b);
-    const stdA = Math.sqrt(_.mean(_.map(a, (v) => (v - meanA) ** 2)));
-    const stdB = Math.sqrt(_.mean(_.map(b, (v) => (v - meanA) ** 2)));
-
-    const corr = _.mean(
-      _.map(
-        _.range(a.length),
-        (i) => ((a[i] - meanA) * (b[i] - meanB)) / (stdA * stdB)
-      )
-    );
+    const corr = correlation(a, b);
 
     expect(corr).to.approximately(0, 0.05);
   });
@@ -45,5 +38,19 @@ describe("mean_reversion", () => {
   it("should take the same random values if called several times (stabilized)", () => {
     const process = random_mean_reverting(2, 3, 0.2, 0.2).pick(123);
     expect(take(10)(process)).to.deep.eq(take(10)(process));
+  });
+});
+
+describe("white_noise", () => {
+  const sample = take(1000)(white_noise(0.3, 1.23).pick(12513));
+
+  it("should have long-term mean as predefined", function () {
+    const stats = sampleStats(sample);
+    expect(stats.mean).to.approximately(0.3, 0.05);
+  });
+
+  it("should have long-term stdev as predefined", function () {
+    const stats = sampleStats(sample);
+    expect(stats.std).to.approximately(1.23, 0.05);
   });
 });

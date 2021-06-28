@@ -20,9 +20,9 @@ import {
   toTrades,
   diff,
   pricePositions,
-} from "../src/calc/esg/esg";
+} from "../../src/calc/esg/esg";
 import _ = require("lodash");
-import { constant, fmap } from "../src/calc/processes";
+import { constant, fmap } from "../../src/calc/processes";
 
 describe("ESG", () => {
   const params: MarketParams = {
