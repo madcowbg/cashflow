@@ -393,7 +393,6 @@ export function defaultLogRevertingSentiment(
       const currentDiff = Math.log(
         initialSentiment.discountRate - minDiscountRate
       );
-      console.error(minDiscountRate);
       const sentiment_log_value_above_min = random_mean_reverting(
         currentDiff,
         currentDiff,
