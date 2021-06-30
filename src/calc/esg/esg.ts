@@ -383,23 +383,27 @@ export function evolveSecurity(
   };
 }
 
-export function defaultRevertingSentiment(
+export function defaultLogRevertingSentiment(
   economy: MarketParams,
   minDiscountRate: number,
   initialSentiment: MarketSentiment
 ): Random<Process<MarketSentiment>> {
   return {
     pick(seed: number) {
-      const sentiment_value_above_min = random_mean_reverting(
-        initialSentiment.discountRate,
-        initialSentiment.discountRate,
-        0.1,
-        0.001304846
+      const currentDiff = Math.log(
+        initialSentiment.discountRate - minDiscountRate
+      );
+      console.error(minDiscountRate);
+      const sentiment_log_value_above_min = random_mean_reverting(
+        currentDiff,
+        currentDiff,
+        0.100615087,
+        0.049893145
       ).pick(seed);
 
-      return fmap((sentiment_value: number) => ({
-        discountRate: sentiment_value,
-      }))(sentiment_value_above_min);
+      return fmap((sentiment_log_value_above_min: number) => ({
+        discountRate: Math.exp(sentiment_log_value_above_min) + minDiscountRate,
+      }))(sentiment_log_value_above_min);
     },
   };
 }
@@ -475,7 +479,7 @@ export function savingsTrajectory(
     initialInvestmentVehicle,
     investmentResult: {
       pick(seed: number) {
-        const sentiment = defaultRevertingSentiment(
+        const sentiment = defaultLogRevertingSentiment(
           marketParams,
           initialInvestmentVehicle.realDividendGrowth,
           initialSentiment

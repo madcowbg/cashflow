@@ -72,8 +72,7 @@ If that is broken, any market price can be justified.
 The market sentiment - equal to the required market return - is a mean-reverting
 process:
 
-![market return equation](<https://latex.codecogs.com/gif.latex?\Delta mr_
-{t+1} = beta * (ltm - mr_t) + mr^{res}_{t+1}>)
+![market return equation](<https://latex.codecogs.com/gif.latex?\Delta mr_{t+1} = beta * (ltm - mr_t) + mr^{res}_{t+1}>)
 ,
 
 where TODO describe vars
