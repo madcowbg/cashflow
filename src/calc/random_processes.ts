@@ -8,6 +8,8 @@ export type Random<A> = {
   pick(seed: number): A;
 };
 
+export type WhiteNoise = Process<number>;
+
 /**
  * A mean-reverting process.
  * @param x_0 the current level of the process
@@ -20,14 +22,13 @@ export function random_mean_reverting(
   ltm: number,
   nu: number,
   std_resid: number
-): Random<Process<number>> {
-  return rmap(
-    (driver: Process<number>) =>
-      stateful(
-        (prevNumber: number, residual: number) =>
-          prevNumber + nu * (ltm - prevNumber) + std_resid * residual
-      )(x_0, driver).evolve // note: skipping x_0 when we return, as it is not random
-  )(white_noise(0, 1));
+): (innovations: WhiteNoise) => Process<number> {
+  return (innovations: WhiteNoise) =>
+    // note: skipping x_0 when we return, as it is not random
+    stateful(
+      (prevNumber: number, residual: number) =>
+        prevNumber + nu * (ltm - prevNumber) + std_resid * residual
+    )(x_0, innovations).evolve;
 }
 
 function randomNormal(mu: number, sigma: number): (seed: number) => number {
@@ -50,15 +51,14 @@ function randomNormal(mu: number, sigma: number): (seed: number) => number {
   };
 }
 
+export const standard_white_noise = white_noise(0, 1);
+
 /**
  * A white-noise process
  * @param mean
  * @param stdev
  */
-export function white_noise(
-  mean: number,
-  stdev: number
-): Random<Process<number>> {
+export function white_noise(mean: number, stdev: number): Random<WhiteNoise> {
   return {
     pick(seed: number) {
       const masterLcg: Process<number> = lcg(seed);

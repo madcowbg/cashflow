@@ -3,7 +3,9 @@ import {
   Random,
   random_mean_reverting,
   rmap,
+  standard_white_noise,
   white_noise,
+  WhiteNoise,
 } from "../random_processes";
 import { count, fmap, Process, stateful } from "../processes";
 
@@ -387,23 +389,21 @@ export function defaultLogRevertingSentiment(
   economy: MarketParams,
   minDiscountRate: number,
   initialSentiment: MarketSentiment
-): Random<Process<MarketSentiment>> {
-  return {
-    pick(seed: number) {
-      const currentDiff = Math.log(
-        initialSentiment.discountRate - minDiscountRate
-      );
-      const sentiment_log_value_above_min = random_mean_reverting(
-        currentDiff,
-        currentDiff,
-        0.100615087,
-        0.049893145
-      ).pick(seed);
+): (wn: WhiteNoise) => Process<MarketSentiment> {
+  return (wn: WhiteNoise) => {
+    const currentDiff = Math.log(
+      initialSentiment.discountRate - minDiscountRate
+    );
+    const sentiment_log_value_above_min = random_mean_reverting(
+      currentDiff,
+      currentDiff,
+      0.100615087,
+      0.049893145
+    )(wn);
 
-      return fmap((sentiment_log_value_above_min: number) => ({
-        discountRate: Math.exp(sentiment_log_value_above_min) + minDiscountRate,
-      }))(sentiment_log_value_above_min);
-    },
+    return fmap((sentiment_log_value_above_min: number) => ({
+      discountRate: Math.exp(sentiment_log_value_above_min) + minDiscountRate,
+    }))(sentiment_log_value_above_min);
   };
 }
 
@@ -427,16 +427,6 @@ export function inflationAdjustedSavings(
     monthlyInvestment:
       savings.monthlyInvestment * Math.pow(1 + params.inflation / 12, tMonth),
   }))(count(0));
-}
-
-function defaultRealizedDividendRatio(
-  params: DividendParams
-): Random<Process<number>> {
-  const realizedDividendLNRatio = white_noise(
-    0,
-    params.realizedDividendAnnualStandardDeviation / Math.sqrt(12)
-  );
-  return rmap(fmap(Math.exp))(realizedDividendLNRatio);
 }
 
 export interface DividendParams {
@@ -478,14 +468,20 @@ export function savingsTrajectory(
     initialInvestmentVehicle,
     investmentResult: {
       pick(seed: number) {
+        const sentimentInno = standard_white_noise.pick(SENTIMENT_SEED + seed);
         const sentiment = defaultLogRevertingSentiment(
           marketParams,
           initialInvestmentVehicle.realDividendGrowth,
           initialSentiment
-        ).pick(SENTIMENT_SEED + seed);
+        )(sentimentInno);
 
-        const realizedDividendRatio = defaultRealizedDividendRatio(
-          dividendParams
+        const realizedDividendLNRatio = white_noise(
+          0,
+          dividendParams.realizedDividendAnnualStandardDeviation / Math.sqrt(12)
+        );
+
+        const realizedDividendRatio = rmap(fmap(Math.exp))(
+          realizedDividendLNRatio
         ).pick(REALIZATION_DIVIDEND_RATIO_SEED + seed);
 
         const securityAtTimes = fmap<SecurityAtTime, Pricing<DummyI>>(
